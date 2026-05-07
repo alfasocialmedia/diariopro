@@ -18,6 +18,7 @@ logs/
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE y herramientas de desarrollo
 .vscode/
 .idea/
+.claude/
