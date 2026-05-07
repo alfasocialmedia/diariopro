@@ -1,0 +1,36 @@
+# Dependencias (se instalan en el build)
+node_modules/
+
+# Secretos y entorno (se configuran en Coolify como variables)
+.env
+*.env.local
+
+# Bases de datos (se montan como volumen persistente en Coolify)
+*.sqlite
+*.sqlite3
+*.db
+database/diarionow.db
+database/diarionow.db-wal
+database/diarionow.db-shm
+
+# Archivos de desarrollo y temporales
+scratch/
+.git/
+.gitignore
+.claude/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# Documentos no relacionados
+*.pdf
+README.md

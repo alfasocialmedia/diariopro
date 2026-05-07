@@ -1,0 +1,23 @@
+# Entorno y secretos
+.env
+*.env.local
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependencias
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
