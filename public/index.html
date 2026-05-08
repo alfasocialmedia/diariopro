@@ -275,44 +275,40 @@
             }
             .section-header h2 { font-size: 1rem }
 
-            /* News grid → lista de items horizontales */
+            /* News grid → 2 columnas en mobile */
             .news-grid {
-                display: flex;
-                flex-direction: column;
-                gap: 0;
-                grid-template-columns: unset
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 8px 12px
             }
             .news-card {
                 display: flex;
-                flex-direction: row;
-                align-items: stretch;
-                border-radius: 0;
-                border: none;
-                border-bottom: 1px solid var(--border);
+                flex-direction: column;
+                border-radius: var(--radius);
+                border: 1px solid var(--border-light);
                 gap: 0;
-                min-height: 82px
+                min-height: auto;
+                overflow: hidden
             }
-            .news-card:last-child { border-bottom: none }
             .news-card:hover { transform: none; box-shadow: none; background: var(--bg-alt) }
             .news-card-img {
-                width: 100px;
-                height: auto;
-                min-height: 82px;
-                max-height: 110px;
+                width: 100%;
+                height: 100px;
                 object-fit: cover;
                 border-radius: 0;
                 flex-shrink: 0
             }
             .news-card-body {
-                padding: 10px 12px;
+                padding: 8px 10px 10px;
                 display: flex;
                 flex-direction: column;
-                justify-content: center;
+                justify-content: flex-start;
                 flex: 1
             }
             .news-card-cat { font-size: 0.62rem; margin-bottom: 3px }
             .news-card-body h3 {
-                font-size: 0.88rem;
+                font-size: 0.8rem;
                 line-height: 1.3;
                 margin-bottom: 0;
                 display: -webkit-box;
