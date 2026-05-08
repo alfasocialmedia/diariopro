@@ -2917,12 +2917,44 @@ if (serverState.articles) {
         }
 
         /* ===== RENDER: ARTÍCULO ===== */
+        function splitParagraph(text) {
+            var MAX = 280;
+            if (text.length <= MAX) return [text];
+            var sentences = [];
+            var re = /[^.!?]*[.!?]+/g;
+            var m;
+            while ((m = re.exec(text)) !== null) sentences.push(m[0]);
+            var tail = text.slice(re.lastIndex).trim();
+            if (tail) sentences.push(tail);
+            if (sentences.length <= 1) return [text];
+            var result = [], cur = '';
+            for (var i = 0; i < sentences.length; i++) {
+                var s = sentences[i];
+                if (cur.length > 0 && cur.length + s.length > MAX) {
+                    result.push(cur.trim());
+                    cur = s;
+                } else {
+                    cur += s;
+                }
+            }
+            if (cur.trim()) result.push(cur.trim());
+            return result.length > 1 ? result : [text];
+        }
+
         function renderArticle(id) {
             var a = null; for (var i = 0; i < APP.articles.length; i++) { if (APP.articles[i].id === id) { a = APP.articles[i]; break; } }
             if (!a) return;
             var c = catById(a.categoryId);
             var paras = a.body.split(/\n\n+/);
-            var ps = ''; for (var i = 0; i < paras.length; i++) { var p = paras[i].replace(/\n/g, ' ').trim(); if (p) ps += '<p>' + esc(p) + '</p>'; }
+            var ps = '';
+            for (var i = 0; i < paras.length; i++) {
+                var p = paras[i].replace(/\n/g, ' ').trim();
+                if (!p) continue;
+                var subs = splitParagraph(p);
+                for (var j = 0; j < subs.length; j++) {
+                    if (subs[j].trim()) ps += '<p>' + esc(subs[j].trim()) + '</p>';
+                }
+            }
             var shareTitle = encodeURIComponent(a.title);
             var articlePath = '/n/' + (a.slug || a.id);
             var shareUrl = encodeURIComponent(window.location.protocol + '//' + window.location.host + articlePath);
