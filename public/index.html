@@ -2246,24 +2246,8 @@
             /* Mostrar barra de modos móvil */
             .player-mobile-mode-bar { display: flex !important; }
 
-            /* Radio player moderno — ajustes móvil */
-            .radio-page-modern { margin: 0 !important; padding: 0 8px !important; }
-            .modern-player-bg { padding: 20px 16px !important; }
-            .modern-player-image { width: 130px !important; height: 130px !important; border-width: 3px !important; }
-            .info-label { font-size: 0.8rem !important; margin-bottom: 4px !important; }
-            .info-program { font-size: 1.4rem !important; margin-bottom: 8px !important; }
-            .info-host { font-size: 0.85rem !important; }
-            .modern-player-bottom { gap: 12px !important; justify-content: center !important; }
-            .modern-play-btn {
-                font-size: 1rem !important;
-                background: rgba(255,255,255,0.15) !important;
-                border: 2px solid rgba(255,255,255,0.5) !important;
-                border-radius: 30px !important;
-                padding: 10px 20px !important;
-                gap: 8px !important;
-            }
-            .live-pill { font-size: 0.72rem !important; padding: 4px 10px !important; gap: 5px !important; }
-            .modern-volume-btn { font-size: 1.1rem !important; }
+            /* Radio player moderno — solo overrides adicionales móvil */
+            .radio-page-modern { margin: 0; padding: 0 8px; }
         }
 
         @media(prefers-reduced-motion:reduce) {
@@ -2278,24 +2262,36 @@
     
 .radio-page-modern { max-width: 900px; margin: 40px auto; padding: 0 20px; }
 .modern-player-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
-.modern-player-bg { background: linear-gradient(135deg, #8B0000 0%, #d32f2f 50%, #4a0000 100%); position: relative; padding: 40px; display: flex; flex-direction: column; }
+.modern-player-bg { background: linear-gradient(135deg, #8B0000 0%, #d32f2f 50%, #4a0000 100%); position: relative; padding: 20px 16px; display: flex; flex-direction: column; }
 .modern-player-content { position: relative; z-index: 2; }
-.modern-player-main { display: flex; align-items: center; gap: 40px; margin-bottom: 40px; }
-@media(max-width: 768px) { .modern-player-main { flex-direction: column; text-align: center; gap: 20px; } }
-.modern-player-image { width: 220px; height: 220px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.2); overflow: hidden; flex-shrink: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background: #fff; }
+.modern-player-main { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; flex-direction: column; text-align: center; }
+.modern-player-image { width: 130px; height: 130px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.2); overflow: hidden; flex-shrink: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background: #fff; }
 .modern-player-image img { width: 100%; height: 100%; object-fit: cover; }
 .modern-player-info { color: #fff; }
-.info-label { font-size: 1rem; font-weight: 500; margin-bottom: 8px; opacity: 0.9; }
-.info-program { font-family: var(--font-serif); font-size: 2.5rem; font-weight: 700; margin: 0 0 16px 0; line-height: 1.1; letter-spacing: -0.5px; }
-.info-separator { width: 40px; height: 3px; background: #ff5252; margin-bottom: 16px; }
-@media(max-width: 768px) { .info-separator { margin: 0 auto 16px; } }
-.info-host { font-size: 1.1rem; font-weight: 400; opacity: 0.9; }
-.modern-player-bottom { display: flex; align-items: center; justify-content: space-between; }
-.live-pill { background: #fff; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.live-dot-red { width: 8px; height: 8px; background: #ff0000; border-radius: 50%; animation: liveDot 1.5s infinite; }
-.modern-play-btn { background: transparent; border: none; color: #fff; font-size: 3rem; cursor: pointer; transition: transform 0.2s; display:flex; align-items:center; justify-content:center; }
-.modern-play-btn:hover { transform: scale(1.1); }
-.modern-volume-btn { color: #fff; font-size: 1.5rem; cursor: pointer; }
+.info-label { font-size: 0.82rem; font-weight: 500; margin-bottom: 4px; opacity: 0.9; }
+.info-program { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; margin: 0 0 10px 0; line-height: 1.2; letter-spacing: -0.3px; }
+.info-separator { width: 40px; height: 3px; background: #ff5252; margin: 0 auto 12px; }
+.info-host { font-size: 0.9rem; font-weight: 400; opacity: 0.9; }
+.modern-player-bottom { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+.live-pill { background: #fff; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.live-dot-red { width: 7px; height: 7px; background: #ff0000; border-radius: 50%; animation: liveDot 1.5s infinite; }
+.modern-play-btn { background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.5); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 30px; padding: 10px 22px; white-space: nowrap; }
+.modern-play-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.03); }
+.modern-volume-btn { color: #fff; font-size: 1.2rem; cursor: pointer; flex-shrink: 0; }
+@media(min-width: 769px) {
+    .modern-player-bg { padding: 40px; }
+    .modern-player-main { flex-direction: row; text-align: left; gap: 40px; margin-bottom: 40px; }
+    .modern-player-image { width: 220px; height: 220px; border-width: 6px; }
+    .info-label { font-size: 1rem; margin-bottom: 8px; }
+    .info-program { font-size: 2.5rem; margin-bottom: 16px; }
+    .info-separator { margin: 0 0 16px 0; }
+    .info-host { font-size: 1.1rem; }
+    .modern-player-bottom { justify-content: space-between; gap: 0; margin-top: 0; }
+    .live-pill { font-size: 0.85rem; padding: 6px 16px; gap: 8px; }
+    .live-dot-red { width: 8px; height: 8px; }
+    .modern-play-btn { font-size: 1.6rem; background: transparent; border: none; padding: 0; border-radius: 0; gap: 0; }
+    .modern-volume-btn { font-size: 1.5rem; }
+}
 .modern-player-footer-dark { background: #222; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 8px; overflow: hidden; }
 .footer-dark-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
 .footer-logo { font-family: var(--font-serif); font-weight: 900; font-size: 1.1rem; font-style: italic; white-space: nowrap; flex-shrink: 0; }
@@ -2969,7 +2965,7 @@ if (serverState.articles) {
                 document.getElementById('playIcon').className = 'fas fa-play';
                 document.getElementById('playPauseBtn').classList.remove('playing');
                 document.getElementById('radioPlayBtn').innerHTML = '<i class="fas fa-play"></i> Escuchar Ahora';
-                stopViz(); showToast('Radio pausada', 'info');
+                stopViz();
             } else {
                 audio.src = APP.config.radioStreamUrl; audio.volume = APP.volume / 100;
                 audio.play().then(function () {
@@ -2977,7 +2973,7 @@ if (serverState.articles) {
                     document.getElementById('playIcon').className = 'fas fa-pause';
                     document.getElementById('playPauseBtn').classList.add('playing');
                     document.getElementById('radioPlayBtn').innerHTML = '<i class="fas fa-pause"></i> Detener';
-                    startViz(); showToast('Radio en vivo', 'success');
+                    startViz();
                 }).catch(function (e) { showToast('Error al conectar: ' + e.message, 'error'); });
             }
         }
