@@ -123,7 +123,7 @@ diariopro/
 │   └── ai-rewriter.js  # Integración con APIs de IA
 ├── database/
 │   ├── db.js           # Inicialización de SQLite y tablas
-│   └── diarionow.db    # Base de datos (NO subir a git)
+│   └── diariopro.db    # Base de datos (NO subir a git)
 ├── public/
 │   ├── index.html      # Portal de noticias
 │   └── admin.html      # Panel administrativo

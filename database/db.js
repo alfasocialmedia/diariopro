@@ -3,7 +3,7 @@ const path = require('path');
 
 // En Coolify/Docker: configurar DB_PATH=/data/diarionow.db + volumen persistente en /data
 // En local: usa la ruta por defecto relativa al archivo
-const dbPath = process.env.DB_PATH || path.resolve(__dirname, 'diarionow.db');
+const dbPath = process.env.DB_PATH || path.resolve(__dirname, 'diariopro.db');
 const db = new sqlite3.Database(dbPath);
 
 // WAL mode: mejor rendimiento con lecturas concurrentes (Docker/producción)
@@ -62,9 +62,9 @@ db.serialize(() => {
     db.get("SELECT COUNT(*) as count FROM config", (err, row) => {
         if (row && row.count === 0) {
             const initialConfig = {
-                siteName: 'DiarioNow',
+                siteName: 'DiarioPro',
                 radioStreamUrl: 'https://streams.ilovemusic.de/iloveradio17.mp3',
-                radioName: 'Radio DiarioNow',
+                radioName: 'Radio DiarioPro',
                 aiProvider: 'openai',
                 openaiKey: '',
                 openaiModel: 'gpt-4o-mini',
@@ -76,7 +76,7 @@ db.serialize(() => {
                 maxArticlesPerRun: 10,
                 articlesPerSource: 2,
                 scraperInterval: 0,
-                defaultAuthor: 'Redacción DiarioNow'
+                defaultAuthor: 'Redacción DiarioPro'
             };
             const stmt = db.prepare("INSERT INTO config (key, value) VALUES (?, ?)");
             for (let [k, v] of Object.entries(initialConfig)) {
