@@ -9,9 +9,9 @@ node_modules/
 *.sqlite
 *.sqlite3
 *.db
-database/diarionow.db
-database/diarionow.db-wal
-database/diarionow.db-shm
+database/*.db
+database/*.db-wal
+database/*.db-shm
 
 # Archivos de desarrollo y temporales
 scratch/

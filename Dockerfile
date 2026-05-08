@@ -5,6 +5,9 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
+# Puerto en que escucha la app (debe coincidir con EXPOSE y healthcheck)
+ENV PORT=3001
+
 # Copiar solo el package.json primero (cache de capas de Docker)
 COPY package*.json ./
 RUN npm install --production
