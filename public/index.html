@@ -2233,6 +2233,20 @@
                 min-width: 240px;
                 max-width: calc(100vw - 48px)
             }
+
+            /* Player footer mobile */
+            .modern-player-footer-dark {
+                padding: 10px 12px;
+                gap: 6px;
+            }
+            .footer-dark-left { gap: 8px; }
+            .footer-logo { font-size: 0.95rem; }
+            .footer-program-name { font-size: 0.8rem; padding-left: 8px; }
+            .player-mode-label { display: none; }
+            .player-mode-btn { padding: 7px 10px; font-size: 1rem; }
+            .modern-player-footer-light > div,
+            .modern-player-footer-light > button { padding: 10px 6px; font-size: 0.78rem; }
+            .next-prog-label { display: none; }
         }
 
         @media(prefers-reduced-motion:reduce) {
@@ -2265,16 +2279,19 @@
 .modern-play-btn { background: transparent; border: none; color: #fff; font-size: 3rem; cursor: pointer; transition: transform 0.2s; display:flex; align-items:center; justify-content:center; }
 .modern-play-btn:hover { transform: scale(1.1); }
 .modern-volume-btn { color: #fff; font-size: 1.5rem; cursor: pointer; }
-.modern-player-footer-dark { background: #222; color: #fff; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
-.footer-dark-left { display: flex; align-items: center; gap: 16px; }
-.footer-logo { font-family: var(--font-serif); font-weight: 900; font-size: 1.2rem; font-style: italic; }
+.modern-player-footer-dark { background: #222; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 8px; overflow: hidden; }
+.footer-dark-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+.footer-logo { font-family: var(--font-serif); font-weight: 900; font-size: 1.1rem; font-style: italic; white-space: nowrap; flex-shrink: 0; }
 .footer-logo span { color: var(--accent); }
-.footer-program-name { border-left: 1px solid rgba(255,255,255,0.2); padding-left: 16px; font-size: 1.1rem; }
-.footer-dark-right { font-size: 1.2rem; display: flex; gap: 16px; cursor: pointer; }
-.modern-player-footer-light { background: #f5f5f5; display: flex; align-items: stretch; color: #333; }
-.modern-player-footer-light > div, .modern-player-footer-light > button { flex: 1; padding: 16px; text-align: center; font-size: 0.95rem; }
-.next-program-text { background: #e0e0e0; display:flex; align-items:center; justify-content:center; gap: 8px; }
-.btn-view-schedule { background: #fff; border: none; font-weight: 700; color: #333; cursor: pointer; transition: background 0.2s; font-size: 0.95rem; }
+.footer-program-name { border-left: 1px solid rgba(255,255,255,0.2); padding-left: 12px; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.footer-dark-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.player-mode-btn { border: none; color: #fff; padding: 6px 12px; cursor: pointer; border-radius: 18px; font-weight: 700; font-size: 0.82rem; transition: background 0.2s; background: transparent; white-space: nowrap; }
+.player-mode-btn-active { background: var(--accent) !important; }
+.modern-player-footer-light { background: #f5f5f5; display: flex; align-items: stretch; color: #333; overflow: hidden; }
+.modern-player-footer-light > div, .modern-player-footer-light > button { flex: 1; padding: 12px 10px; text-align: center; font-size: 0.88rem; min-width: 0; }
+.next-program-text { background: #e0e0e0; display:flex; align-items:center; justify-content:center; gap: 6px; overflow: hidden; white-space: nowrap; }
+.next-program-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-view-schedule { background: #fff; border: none; font-weight: 700; color: #333; cursor: pointer; transition: background 0.2s; font-size: 0.88rem; white-space: nowrap; }
 .btn-view-schedule:hover { background: #f0f0f0; color: var(--accent); }
 
     
@@ -2415,21 +2432,20 @@
                     
                     <div class="modern-player-footer-dark">
                         <div class="footer-dark-left">
-                            <div class="footer-logo">Diario<span>Now</span></div>
+                            <div class="footer-logo player-logo-text">Diario<span>Pro</span></div>
                             <div class="footer-program-name" id="footerProgramName">Radio en Vivo</div>
                         </div>
-                        <div class="footer-dark-right" style="display: flex; align-items: center; gap: 16px;">
-                            <div style="display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; padding: 2px;">
-                                <button id="btnModeRadio" onclick="setPlayerMode('radio')" style="background: var(--accent); border: none; color: #fff; padding: 6px 12px; cursor: pointer; border-radius: 18px; font-weight: bold; font-size: 0.85rem; transition: background 0.3s;"><i class="fas fa-broadcast-tower" style="margin-right:4px;"></i> Radio</button>
-                                <button id="btnModeVideo" onclick="setPlayerMode('video')" style="background: transparent; border: none; color: #fff; padding: 6px 12px; cursor: pointer; border-radius: 18px; font-weight: bold; font-size: 0.85rem; transition: background 0.3s;"><i class="fas fa-video" style="margin-right:4px;"></i> Video</button>
+                        <div class="footer-dark-right" style="display: flex; align-items: center; gap: 10px;">
+                            <div class="player-mode-toggle" style="display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; padding: 2px;">
+                                <button id="btnModeRadio" onclick="setPlayerMode('radio')" class="player-mode-btn player-mode-btn-active"><i class="fas fa-broadcast-tower"></i><span class="player-mode-label"> Radio</span></button>
+                                <button id="btnModeVideo" onclick="setPlayerMode('video')" class="player-mode-btn"><i class="fas fa-video"></i><span class="player-mode-label"> Video</span></button>
                             </div>
-                            <i class="fas fa-share-alt" style="cursor:pointer;"></i>
                         </div>
                     </div>
-                    
+
                     <div class="modern-player-footer-light">
-                        <div class="next-program-text">Próximo programa: <strong id="nextProgramTitle">Noticias al Día</strong></div>
-                        <button class="btn-view-schedule" onclick="document.getElementById('scheduleListContainer').scrollIntoView({behavior:'smooth'})">VER PROGRAMACIÓN</button>
+                        <div class="next-program-text"><span class="next-prog-label">Próximo: </span><strong id="nextProgramTitle">Noticias al Día</strong></div>
+                        <button class="btn-view-schedule" onclick="document.getElementById('scheduleListContainer').scrollIntoView({behavior:'smooth'})">VER PROG.</button>
                     </div>
                 </div>
                 
