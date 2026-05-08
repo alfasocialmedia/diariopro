@@ -50,6 +50,8 @@ const helmetOptions = {
                 "https://api.openai.com",
                 "https://generativelanguage.googleapis.com",
                 "https://openrouter.ai",
+                "https://dolarapi.com",
+                "https://api.argentinadatos.com",
                 "blob:",
                 "wss:",
                 "ws:"
