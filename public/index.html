@@ -8,6 +8,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>DiarioPro - Diario Digital & Radio en Vivo</title>
+    <!-- __OG_TAGS__ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Nunito+Sans:wght@300;400;600;700&family=Open+Sans:wght@300;400;600;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Playfair+Display:wght@400;700;900&family=Roboto:wght@300;400;500;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -2714,7 +2715,7 @@ if (serverState.articles) {
             }
             else { renderHome();
             renderRadioSchedule();
-            updateRadioCurrentProgram(); document.getElementById('view-home').classList.add('active'); var nb = document.querySelector('.nav-item[data-view="home"]'); if (nb) nb.classList.add('active'); if (document.getElementById('liveBadge')) document.getElementById('liveBadge').style.display = ''; }
+            updateRadioCurrentProgram(); document.getElementById('view-home').classList.add('active'); var nb = document.querySelector('.nav-item[data-view="home"]'); if (nb) nb.classList.add('active'); if (document.getElementById('liveBadge')) document.getElementById('liveBadge').style.display = ''; history.replaceState(null, '', '/'); }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -2861,7 +2862,9 @@ if (serverState.articles) {
             var paras = a.body.split(/\n\n+/);
             var ps = ''; for (var i = 0; i < paras.length; i++) { var p = paras[i].replace(/\n/g, ' ').trim(); if (p) ps += '<p>' + esc(p) + '</p>'; }
             var shareTitle = encodeURIComponent(a.title);
-            var shareUrl = encodeURIComponent(window.location.href);
+            var articlePath = '/n/' + (a.slug || a.id);
+            var shareUrl = encodeURIComponent(window.location.protocol + '//' + window.location.host + articlePath);
+            history.replaceState(null, '', articlePath);
             
             document.getElementById('articleContent').innerHTML = 
                 '<div class="article-back" onclick="nav(\'home\')"><i class="fas fa-arrow-left"></i> Volver</div>' +
@@ -3318,6 +3321,17 @@ if (serverState.articles) {
             audio.volume = APP.volume / 100;
             renderNavigation();
             renderHome();
+
+            // Routing: /n/:slug → navegar al artículo correcto al cargar la URL directa
+            var pathSlug = window.location.pathname.replace(/^\/n\//, '');
+            if (pathSlug && window.location.pathname !== pathSlug) {
+                var artBySlug = null;
+                for (var _i = 0; _i < APP.articles.length; _i++) {
+                    if (APP.articles[_i].slug === pathSlug) { artBySlug = APP.articles[_i]; break; }
+                }
+                if (artBySlug) nav('article', artBySlug.id);
+            }
+
             fetchCotizaciones();
             setInterval(fetchCotizaciones, 5 * 60 * 1000);
 

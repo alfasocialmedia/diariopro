@@ -129,16 +129,87 @@ const auth = (req, res, next) => {
     });
 };
 
+// ─── OG Tags helper ───────────────────────────────────────────────────────────
+function escAttr(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function buildOgTags(title, description, image, url, siteName, type) {
+    type = type || 'website';
+    return [
+        `<meta name="description" content="${escAttr(description)}">`,
+        `<meta property="og:type" content="${type}">`,
+        `<meta property="og:site_name" content="${escAttr(siteName)}">`,
+        `<meta property="og:title" content="${escAttr(title)}">`,
+        `<meta property="og:description" content="${escAttr(description)}">`,
+        `<meta property="og:image" content="${escAttr(image)}">`,
+        `<meta property="og:url" content="${escAttr(url)}">`,
+        `<meta name="twitter:card" content="summary_large_image">`,
+        `<meta name="twitter:title" content="${escAttr(title)}">`,
+        `<meta name="twitter:description" content="${escAttr(description)}">`,
+        `<meta name="twitter:image" content="${escAttr(image)}">`
+    ].join('\n    ');
+}
+
+function injectOgAndState(html, state, ogParams) {
+    const cfg = state.config || {};
+    const siteName = cfg.siteName || 'DiarioPro';
+    const siteUrl = (cfg.siteUrl || '').replace(/\/$/, '');
+    const title = ogParams.title || siteName;
+    const description = ogParams.description || cfg.seoDescription || '';
+    const image = ogParams.image || cfg.seoImage || '';
+    const url = ogParams.url || siteUrl + '/';
+
+    const ogTags = buildOgTags(title, description, image, url, siteName, ogParams.type);
+
+    return html
+        .replace('<title>DiarioPro - Diario Digital & Radio en Vivo</title>', `<title>${escAttr(title)}</title>`)
+        .replace('<!-- __OG_TAGS__ -->', ogTags)
+        .replace('</head>', `<script>window.__INITIAL_STATE__ = ${JSON.stringify(state)};</script></head>`);
+}
+
 // ─── Páginas HTML ─────────────────────────────────────────────────────────────
 app.get('/', async (req, res) => {
     try {
         const state = await getPublicState();
+        const cfg = state.config || {};
+        const siteName = cfg.siteName || 'DiarioPro';
+        const siteUrl = (cfg.siteUrl || '').replace(/\/$/, '');
         let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-        html = html.replace('</head>', `<script>window.__INITIAL_STATE__ = ${JSON.stringify(state)};</script></head>`);
+        html = injectOgAndState(html, state, {
+            title: siteName + (cfg.siteTagline ? ' - ' + cfg.siteTagline : ' - Diario Digital & Radio en Vivo'),
+            description: cfg.seoDescription || '',
+            image: cfg.seoImage || '',
+            url: siteUrl + '/'
+        });
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
     } catch (e) {
         console.error('Error sirviendo index:', e.message);
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+});
+
+// Ruta para compartir artículos — genera OG tags con datos del artículo
+app.get('/n/:slug', async (req, res) => {
+    try {
+        const slug = String(req.params.slug).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 200);
+        const [state, article] = await Promise.all([
+            getPublicState(),
+            getRow('SELECT * FROM articles WHERE slug = ? AND status = ?', [slug, 'published'])
+        ]);
+        const cfg = state.config || {};
+        const siteName = cfg.siteName || 'DiarioPro';
+        const siteUrl = (cfg.siteUrl || '').replace(/\/$/, '');
+        let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+        const ogParams = article
+            ? { title: article.title + ' - ' + siteName, description: article.meta || '', image: article.image || cfg.seoImage || '', url: siteUrl + '/n/' + slug, type: 'article' }
+            : { title: siteName, description: cfg.seoDescription || '', image: cfg.seoImage || '', url: siteUrl + '/' };
+        html = injectOgAndState(html, state, ogParams);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    } catch (e) {
+        console.error('Error sirviendo artículo:', e.message);
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 });

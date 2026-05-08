@@ -63,6 +63,10 @@ db.serialize(() => {
         if (row && row.count === 0) {
             const initialConfig = {
                 siteName: 'DiarioPro',
+                siteUrl: '',
+                siteTagline: 'Diario Digital & Radio en Vivo',
+                seoDescription: '',
+                seoImage: '',
                 radioStreamUrl: 'https://streams.ilovemusic.de/iloveradio17.mp3',
                 radioName: 'Radio DiarioPro',
                 aiProvider: 'openai',

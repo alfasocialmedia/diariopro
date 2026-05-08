@@ -528,9 +528,12 @@
                         <div class="config-card" style="margin:0; grid-column:1/-1;">
                             <h3 style="font-size:0.95rem; margin-bottom:16px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-search" style="color:var(--accent);margin-right:6px;"></i>SEO y Redes Sociales</h3>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                                <div class="form-group"><label class="form-label">Descripción SEO</label><textarea class="form-textarea" id="cfg-seoDescription" rows="3">${cfg.seoDescription||''}</textarea></div>
-                                <div class="form-group"><label class="form-label">Imagen para Redes (URL)</label><div style="display:flex;gap:8px;"><input type="text" class="form-input" id="cfg-seoImage" value="${cfg.seoImage||''}"><button class="btn btn-secondary" onclick="handleImageUpload('cfg-seoImage')"><i class="fas fa-upload"></i></button></div></div>
+                                <div class="form-group"><label class="form-label">URL del Sitio <span style="font-size:0.75rem;color:var(--fg-muted);">(ej: https://noticias.midominio.com)</span></label><input type="text" class="form-input" id="cfg-siteUrl" value="${cfg.siteUrl||''}" placeholder="https://..."></div>
+                                <div class="form-group"><label class="form-label">Eslogan / Tagline</label><input type="text" class="form-input" id="cfg-siteTagline" value="${cfg.siteTagline||'Diario Digital & Radio en Vivo'}"></div>
+                                <div class="form-group"><label class="form-label">Descripción SEO <span style="font-size:0.75rem;color:var(--fg-muted);">(aparece en Google y al compartir)</span></label><textarea class="form-textarea" id="cfg-seoDescription" rows="3">${cfg.seoDescription||''}</textarea></div>
+                                <div class="form-group"><label class="form-label">Imagen para Redes (URL) <span style="font-size:0.75rem;color:var(--fg-muted);">(og:image — mínimo 1200×630px)</span></label><div style="display:flex;gap:8px;flex-direction:column;"><div style="display:flex;gap:8px;"><input type="text" class="form-input" id="cfg-seoImage" value="${cfg.seoImage||''}"><button class="btn btn-secondary" onclick="handleImageUpload('cfg-seoImage')"><i class="fas fa-upload"></i></button></div>${cfg.seoImage ? '<img src="'+cfg.seoImage+'" style="max-height:80px;border-radius:6px;object-fit:cover;" onerror="this.style.display=\'none\'">' : ''}</div></div>
                             </div>
+                            <div style="margin-top:12px;padding:10px 14px;background:var(--bg-alt);border-radius:var(--radius);font-size:0.82rem;color:var(--fg-muted);display:flex;align-items:center;gap:8px;"><i class="fas fa-info-circle" style="color:var(--accent);"></i> La URL del Sitio es necesaria para que WhatsApp, Facebook y otros muestren la imagen al compartir un enlace.</div>
                         </div>
                     </div>
                 </div>
@@ -1180,6 +1183,8 @@
                 data.logoDesktop = document.getElementById('cfg-logoDesktop').value;
                 data.logoMobile = document.getElementById('cfg-logoMobile').value;
                 data.faviconUrl = document.getElementById('cfg-faviconUrl').value;
+                data.siteUrl = document.getElementById('cfg-siteUrl').value.replace(/\/$/, '');
+                data.siteTagline = document.getElementById('cfg-siteTagline').value;
                 data.seoDescription = document.getElementById('cfg-seoDescription').value;
                 data.seoImage = document.getElementById('cfg-seoImage').value;
                 data.titleFontFamily = document.getElementById('cfg-titleFontFamily').value;
