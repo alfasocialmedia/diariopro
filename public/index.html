@@ -298,20 +298,19 @@
             .news-card {
                 display: flex;
                 flex-direction: row;
-                align-items: stretch;
+                align-items: center;
                 border-radius: 0;
                 border: none;
                 border-bottom: 1px solid var(--border);
                 box-shadow: none;
                 gap: 0;
-                min-height: 85px;
-                padding: 0;
+                padding: 8px 0 8px 12px;
                 background: var(--bg-card)
             }
             .news-card:last-child { border-bottom: none }
             .news-card:hover { transform: none; box-shadow: none; background: var(--bg-alt) }
             .news-card-body {
-                padding: 10px 10px 10px 12px;
+                padding: 0 10px 0 0;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -320,14 +319,12 @@
                 min-width: 0
             }
             .news-card-img {
-                width: 110px;
-                height: auto;
-                min-height: 85px;
+                width: 105px;
+                height: 78px;
                 object-fit: cover;
-                border-radius: 0;
+                border-radius: 6px;
                 flex-shrink: 0;
-                order: 2;
-                display: block
+                order: 2
             }
             .news-card-cat {
                 font-size: 0.6rem;
