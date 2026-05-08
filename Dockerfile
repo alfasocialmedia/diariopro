@@ -16,11 +16,11 @@ COPY . .
 RUN mkdir -p /data
 
 # Exponer el puerto de la aplicación
-EXPOSE 3000
+EXPOSE 3001
 
 # Healthcheck para que Coolify/Docker sepa si la app está viva
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget -qO- http://localhost:3000/api/state || exit 1
+    CMD wget -qO- http://localhost:3001/api/state || exit 1
 
 # Iniciar la aplicación
 CMD ["node", "server.js"]
