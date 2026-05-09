@@ -58,6 +58,34 @@ db.serialize(() => {
         value TEXT
     )`);
 
+    db.run(`CREATE TABLE IF NOT EXISTS polls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question TEXT,
+        description TEXT,
+        show_results INTEGER DEFAULT 0,
+        active INTEGER DEFAULT 1,
+        ends_at TEXT,
+        placement TEXT DEFAULT 'home_top',
+        article_paragraph_after INTEGER DEFAULT 2,
+        created_at TEXT
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS poll_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        poll_id INTEGER,
+        text TEXT,
+        image TEXT,
+        sort_order INTEGER DEFAULT 0
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS poll_votes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        poll_id INTEGER,
+        option_id INTEGER,
+        voter_hash TEXT,
+        voted_at TEXT
+    )`);
+
     db.run(`CREATE TABLE IF NOT EXISTS ads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,

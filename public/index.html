@@ -2370,6 +2370,31 @@
 .rs-time { color: var(--accent); font-weight: 800; font-size: 1rem; }
 .rs-info h4 { color: #222; font-size: 1.15rem; margin: 4px 0 0 0; font-family: var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
 
+/* ═══ ENCUESTAS ═══ */
+.poll-widget { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin:16px 0; }
+.poll-tag { display:inline-flex; align-items:center; gap:6px; background:var(--accent); color:#fff; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; padding:3px 10px; border-radius:20px; margin-bottom:12px; }
+.poll-question { font-family:var(--font-display); font-size:1.1rem; font-weight:700; margin-bottom:6px; line-height:1.35; }
+.poll-desc { font-size:0.85rem; color:var(--fg-muted); margin-bottom:14px; }
+.poll-countdown { display:inline-flex; align-items:center; gap:6px; background:var(--bg-alt); border-radius:20px; padding:4px 12px; font-size:0.75rem; font-weight:700; color:var(--warning); margin-bottom:14px; }
+.poll-options-list { display:flex; flex-direction:column; gap:8px; }
+.poll-option-btn { display:flex; align-items:center; gap:12px; padding:10px 14px; border:2px solid var(--border); border-radius:10px; background:var(--bg); cursor:pointer; transition:border-color 0.2s,background 0.2s; text-align:left; font-family:var(--font-body); font-size:0.9rem; font-weight:600; color:var(--fg); width:100%; }
+.poll-option-btn:hover { border-color:var(--accent); background:var(--accent-light); }
+.poll-option-btn img { width:44px; height:44px; object-fit:cover; border-radius:6px; flex-shrink:0; }
+.poll-results-list { display:flex; flex-direction:column; gap:10px; }
+.poll-result-item { display:grid; gap:4px; }
+.poll-result-header { display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; }
+.poll-result-label { font-weight:600; display:flex; align-items:center; gap:6px; }
+.poll-result-label img { width:28px; height:28px; object-fit:cover; border-radius:4px; }
+.poll-result-pct { font-weight:800; color:var(--accent); }
+.poll-result-bar-track { height:8px; background:var(--bg-alt); border-radius:4px; overflow:hidden; }
+.poll-result-bar-fill { height:100%; border-radius:4px; transition:width 0.6s cubic-bezier(.4,0,.2,1); }
+.poll-voted-msg { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--success); font-weight:600; margin-top:14px; padding:8px 12px; background:rgba(46,125,50,0.1); border-radius:8px; }
+.poll-footer { display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid var(--border-light); }
+.poll-total-votes { font-size:0.78rem; color:var(--fg-muted); }
+.poll-share-btn { display:inline-flex; align-items:center; gap:6px; background:#25D366; color:#fff; border-radius:20px; padding:6px 14px; font-size:0.78rem; font-weight:700; text-decoration:none; transition:opacity 0.2s; }
+.poll-share-btn:hover { opacity:0.85; color:#fff; }
+@media (max-width:768px) { .poll-question { font-size:0.98rem; } .poll-option-btn { font-size:0.85rem; padding:9px 12px; } }
+
 /* ═══ ANUNCIOS ═══ */
 .ad-slot { text-align: center; padding: 12px 16px; overflow: hidden; }
 .ad-slot img { max-width: 100%; height: auto; display: inline-block; }
@@ -2760,6 +2785,154 @@ if (serverState.articles) {
             APP.articles = DEMO_ARTICLES.map(function (a) { return Object.assign({}, a); });
         }
         APP.ads = loadData('ads', []);
+        APP.polls = loadData('polls', []);
+
+        /* ===== ENCUESTAS ===== */
+        function getPollsForPlacement(placement) {
+            var dt = deviceType();
+            return (APP.polls || []).filter(function(p) {
+                if (p.placement !== placement) return false;
+                if (p.ends_at && new Date(p.ends_at) < new Date()) return false;
+                return true;
+            });
+        }
+
+        function pollVoteKey(pollId) { return 'poll_vote_' + pollId; }
+
+        function getPollVote(pollId) {
+            try { var v = localStorage.getItem(pollVoteKey(pollId)); return v ? JSON.parse(v) : null; }
+            catch(e) { return null; }
+        }
+
+        function setPollVote(pollId, optionId) {
+            try { localStorage.setItem(pollVoteKey(pollId), JSON.stringify({optionId: optionId, at: Date.now()})); }
+            catch(e) {}
+        }
+
+        function pollCountdown(endsAt) {
+            var ms = new Date(endsAt) - new Date();
+            if (ms <= 0) return null;
+            var s = Math.floor(ms / 1000);
+            var m = Math.floor(s / 60); s = s % 60;
+            var h = Math.floor(m / 60); m = m % 60;
+            var d = Math.floor(h / 24); h = h % 24;
+            if (d > 0) return d + 'd ' + h + 'h';
+            if (h > 0) return h + 'h ' + m + 'm';
+            return m + 'm ' + s + 's';
+        }
+
+        function renderPollResultsHtml(poll, highlightId) {
+            var total = poll.total_votes || 0;
+            var html = '<div class="poll-results-list">';
+            for (var i = 0; i < poll.options.length; i++) {
+                var o = poll.options[i];
+                var votes = o.votes || 0;
+                var pct = total > 0 ? Math.round(votes / total * 100) : 0;
+                var isVoted = highlightId && o.id === highlightId;
+                var color = isVoted ? 'var(--accent)' : 'var(--info)';
+                html += '<div class="poll-result-item">' +
+                    '<div class="poll-result-header">' +
+                    '<span class="poll-result-label">' +
+                    (o.image ? '<img src="' + escAttr(o.image) + '" alt="">' : '') +
+                    esc(o.text) + (isVoted ? ' <i class="fas fa-check-circle" style="color:var(--accent)"></i>' : '') +
+                    '</span>' +
+                    '<span class="poll-result-pct">' + pct + '%</span>' +
+                    '</div>' +
+                    '<div class="poll-result-bar-track"><div class="poll-result-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+                    '</div>';
+            }
+            html += '</div><div class="poll-total-votes" style="margin-top:8px;">' + total + ' votos en total</div>';
+            return html;
+        }
+
+        function renderPollWidget(poll) {
+            var voted = getPollVote(poll.id);
+            var votedId = voted ? voted.optionId : null;
+            var showResults = (poll.show_results == 1) || (poll.show_results == 0 && votedId);
+            var shareText = encodeURIComponent('Participá en esta encuesta: ' + poll.question + ' ' + window.location.href);
+            var cdText = poll.ends_at ? pollCountdown(poll.ends_at) : null;
+
+            var html = '<div class="poll-widget" id="poll-w-' + poll.id + '">' +
+                '<div class="poll-tag"><i class="fas fa-chart-bar"></i> Encuesta</div>' +
+                '<div class="poll-question">' + esc(poll.question) + '</div>';
+            if (poll.description) html += '<div class="poll-desc">' + esc(poll.description) + '</div>';
+            if (cdText) html += '<div class="poll-countdown"><i class="fas fa-clock"></i> Cierra en: ' + cdText + '</div>';
+
+            if (votedId) {
+                html += '<div class="poll-voted-msg"><i class="fas fa-check-circle"></i> Ya votaste en esta encuesta</div>';
+                if (showResults) html += renderPollResultsHtml(poll, votedId);
+            } else if (showResults) {
+                html += renderPollResultsHtml(poll, null);
+                html += '<div class="poll-options-list" style="margin-top:12px;">';
+                for (var i = 0; i < poll.options.length; i++) {
+                    var o = poll.options[i];
+                    html += '<button type="button" class="poll-option-btn" onclick="votePoll(' + poll.id + ',' + o.id + ')">' +
+                        (o.image ? '<img src="' + escAttr(o.image) + '" alt="">' : '') +
+                        '<span>' + esc(o.text) + '</span></button>';
+                }
+                html += '</div>';
+            } else {
+                html += '<div class="poll-options-list">';
+                for (var i = 0; i < poll.options.length; i++) {
+                    var o = poll.options[i];
+                    html += '<button type="button" class="poll-option-btn" onclick="votePoll(' + poll.id + ',' + o.id + ')">' +
+                        (o.image ? '<img src="' + escAttr(o.image) + '" alt="">' : '') +
+                        '<span>' + esc(o.text) + '</span></button>';
+                }
+                html += '</div>';
+            }
+
+            html += '<div class="poll-footer">' +
+                '<span class="poll-total-votes">' + (poll.total_votes || 0) + ' votos</span>' +
+                '<a href="https://wa.me/?text=' + shareText + '" target="_blank" rel="noopener" class="poll-share-btn"><i class="fab fa-whatsapp"></i> Compartir</a>' +
+                '</div></div>';
+            return html;
+        }
+
+        function renderPollsBlock(placement) {
+            var polls = getPollsForPlacement(placement);
+            if (!polls.length) return '';
+            return polls.map(renderPollWidget).join('');
+        }
+
+        async function votePoll(pollId, optionId) {
+            if (getPollVote(pollId)) return;
+            try {
+                var res = await fetch('/api/polls/' + pollId + '/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ option_id: optionId })
+                });
+                var data = await res.json();
+                if (res.status === 400 && data.error === 'ya_votaste') {
+                    setPollVote(pollId, optionId);
+                    updatePollWidget(pollId, null, optionId, false);
+                    return;
+                }
+                if (!data.success) return;
+                setPollVote(pollId, optionId);
+                // Update the local poll data with fresh counts
+                var poll = (APP.polls || []).find(function(p) { return p.id === pollId; });
+                if (poll) {
+                    poll.options = data.options;
+                    poll.total_votes = data.total_votes;
+                }
+                updatePollWidget(pollId, data, optionId, true);
+            } catch(e) {}
+        }
+
+        function updatePollWidget(pollId, data, votedOptionId, showResults) {
+            var widgets = document.querySelectorAll('#poll-w-' + pollId);
+            var poll = (APP.polls || []).find(function(p) { return p.id === pollId; });
+            if (!poll) return;
+            if (data) { poll.options = data.options; poll.total_votes = data.total_votes; }
+            var newHtml = renderPollWidget(poll);
+            widgets.forEach(function(w) {
+                var tmp = document.createElement('div');
+                tmp.innerHTML = newHtml;
+                w.parentNode.replaceChild(tmp.firstChild, w);
+            });
+        }
 
         /* ===== ANUNCIOS ===== */
         function deviceType() {
@@ -2960,11 +3133,11 @@ if (serverState.articles) {
             var heroIds = [main.id]; for (var i = 0; i < sides.length; i++) heroIds.push(sides[i].id);
             function inHero(id) { for (var j = 0; j < heroIds.length; j++) { if (heroIds[j] === id) return true; } return false; }
 
-            // Anuncio home_top
-            var homeTopAd = renderAdsBlock('home_top');
-            if (homeTopAd) {
+            // Anuncios y encuestas home_top
+            var homeTopBlock = renderAdsBlock('home_top') + renderPollsBlock('home_top');
+            if (homeTopBlock) {
                 var topEl = document.querySelector('.hero-section');
-                if (topEl) topEl.insertAdjacentHTML('beforebegin', homeTopAd);
+                if (topEl) topEl.insertAdjacentHTML('beforebegin', homeTopBlock);
             }
 
             var secs = '';
@@ -2976,8 +3149,8 @@ if (serverState.articles) {
                 if (cat.active === false) continue;
                 var rem = byCat(cat.id).filter(function (a) { return !inHero(a.id) }).slice(0, 3);
                 if (!rem.length) continue;
-                // Anuncio entre secciones (después de la primera)
-                if (sectionCount > 0) secs += renderAdsBlock('home_between');
+                // Anuncios y encuestas entre secciones (después de la primera)
+                if (sectionCount > 0) secs += renderAdsBlock('home_between') + renderPollsBlock('home_between');
                 sectionCount++;
                 secs += '<div class="news-section" style="padding-top:0"><div class="section-header"><h2>' + esc(cat.name) + '</h2><a href="#" onclick="event.preventDefault();nav(\'' + escAttr(cat.slug) + '\')">Ver todas <i class="fas fa-arrow-right" style="font-size:.75rem"></i></a></div><div class="news-grid stagger-in">';
                 for (var ri = 0; ri < rem.length; ri++) {
@@ -2987,8 +3160,8 @@ if (serverState.articles) {
                 }
                 secs += '</div></div>';
             }
-            // Anuncio home_bottom
-            secs += renderAdsBlock('home_bottom');
+            // Anuncios y encuestas home_bottom
+            secs += renderAdsBlock('home_bottom') + renderPollsBlock('home_bottom');
             
             
             document.getElementById('newsSectionsContainer').innerHTML = secs;
@@ -3036,7 +3209,7 @@ if (serverState.articles) {
             var paras = a.body.split(/\n\n+/);
             var paraCount = 0;
             var ps = '';
-            // Collect article_paragraph ads indexed by paragraph_after
+            // Collect article_paragraph ads and polls indexed by paragraph number
             var paraAds = {};
             (APP.ads || []).forEach(function(ad) {
                 if (ad.placement !== 'article_paragraph') return;
@@ -3046,7 +3219,14 @@ if (serverState.articles) {
                 if (dt === 'desktop' && !ad.show_desktop) return;
                 var n = ad.paragraph_after || 1;
                 if (!paraAds[n]) paraAds[n] = [];
-                paraAds[n].push(ad);
+                paraAds[n].push({ _type: 'ad', ad: ad });
+            });
+            (APP.polls || []).forEach(function(poll) {
+                if (poll.placement !== 'article_paragraph') return;
+                if (poll.ends_at && new Date(poll.ends_at) < new Date()) return;
+                var n = poll.article_paragraph_after || 2;
+                if (!paraAds[n]) paraAds[n] = [];
+                paraAds[n].push({ _type: 'poll', poll: poll });
             });
             for (var i = 0; i < paras.length; i++) {
                 var p = paras[i].replace(/\n/g, ' ').trim();
@@ -3057,12 +3237,15 @@ if (serverState.articles) {
                         paraCount++;
                         ps += '<p>' + esc(subs[j].trim()) + '</p>';
                         if (paraAds[paraCount]) {
-                            ps += paraAds[paraCount].map(renderAdHtml).join('');
+                            paraAds[paraCount].forEach(function(item) {
+                                if (item._type === 'ad') ps += renderAdHtml(item.ad);
+                                else ps += renderPollWidget(item.poll);
+                            });
                         }
                     }
                 }
             }
-            var articleBottomAd = renderAdsBlock('article_bottom');
+            var articleBottomAd = renderAdsBlock('article_bottom') + renderPollsBlock('article_bottom');
             var shareTitle = encodeURIComponent(a.title);
             var articlePath = '/n/' + (a.slug || a.id);
             var shareUrl = encodeURIComponent(window.location.protocol + '//' + window.location.host + articlePath);
@@ -3094,7 +3277,7 @@ if (serverState.articles) {
             document.getElementById('categoryTitle').textContent = cat.name;
             var arts = byCat(cat.id), g = document.getElementById('categoryGrid');
             if (!arts.length) { g.innerHTML = '<p style="color:var(--fg-muted);grid-column:1/-1;text-align:center;padding:40px">No hay artículos en esta categoría.</p>'; return; }
-            var catAd = renderAdsBlock('category');
+            var catAd = renderAdsBlock('category') + renderPollsBlock('category');
             var h = '';
             for (var i = 0; i < arts.length; i++) {
                 var a = arts[i];

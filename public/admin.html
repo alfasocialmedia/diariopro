@@ -170,6 +170,7 @@
                 <button class="admin-nav-item" data-admin="radio-schedule"><i class="fas fa-calendar-alt"></i> Programación Radio</button>
                 <button class="admin-nav-item" data-admin="radio"><i class="fas fa-paint-brush"></i> Apariencia y Sistema</button>
                 <button class="admin-nav-item" data-admin="ads"><i class="fas fa-rectangle-ad"></i> Anuncios</button>
+                <button class="admin-nav-item" data-admin="polls"><i class="fas fa-poll"></i> Encuestas</button>
                 <button class="admin-nav-item" data-admin="ai"><i class="fas fa-robot"></i> IA Config</button>
                 <button class="admin-nav-item" data-admin="security"><i class="fas fa-shield-alt"></i> Seguridad</button>
                 <button class="admin-nav-item" onclick="logout()" style="margin-top: auto; color: var(--danger);"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
@@ -756,6 +757,91 @@
                   </div>
                 </div>`;
                 loadAds();
+            } else if (section === 'polls') {
+                main.innerHTML = `
+                <h1 class="admin-page-title">Encuestas</h1>
+                <p class="admin-page-desc">Creá encuestas con imágenes, conteo de votos y estadísticas en tiempo real.</p>
+                <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+                  <button class="btn btn-primary" onclick="openPollForm()"><i class="fas fa-plus"></i> Nueva Encuesta</button>
+                </div>
+                <div id="pollsList" style="display:flex;flex-direction:column;gap:16px;"></div>
+
+                <!-- Modal form -->
+                <div id="pollModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;">
+                  <div style="background:var(--bg-card);border-radius:14px;padding:28px;max-width:620px;width:100%;position:relative;margin:auto;">
+                    <button type="button" onclick="closePollForm()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--fg-muted);"><i class="fas fa-times"></i></button>
+                    <h2 id="pollModalTitle" style="font-size:1.1rem;font-weight:700;margin-bottom:20px;">Nueva Encuesta</h2>
+                    <input type="hidden" id="pollId">
+                    <div class="form-group">
+                      <label class="form-label">Pregunta *</label>
+                      <input type="text" class="form-input" id="pollQuestion" placeholder="¿Cuál es tu opinión sobre...?">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Descripción (opcional)</label>
+                      <textarea class="form-input" id="pollDesc" rows="2" placeholder="Contexto adicional para la encuesta"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label">Opciones de respuesta *</label>
+                      <div id="pollOptionsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px;"></div>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="addPollOption()"><i class="fas fa-plus"></i> Agregar opción</button>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                      <div class="form-group">
+                        <label class="form-label">Mostrar resultados</label>
+                        <select class="form-select" id="pollShowResults">
+                          <option value="0">Solo después de votar</option>
+                          <option value="1">Siempre visibles</option>
+                          <option value="2">Nunca (solo admin)</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Ubicación</label>
+                        <select class="form-select" id="pollPlacement" onchange="togglePollParagraph()">
+                          <option value="home_top">Home — Arriba</option>
+                          <option value="home_between">Home — Entre secciones</option>
+                          <option value="home_bottom">Home — Abajo</option>
+                          <option value="article_paragraph">Artículo — Entre párrafos</option>
+                          <option value="article_bottom">Artículo — Al final</option>
+                          <option value="category">Sección/Categoría</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div id="pollParagraphField" class="form-group" style="display:none;">
+                      <label class="form-label">Después del párrafo N°</label>
+                      <select class="form-select" id="pollParagraphAfter">
+                        <option value="1">Párrafo 1</option><option value="2">Párrafo 2</option>
+                        <option value="3">Párrafo 3</option><option value="4">Párrafo 4</option><option value="5">Párrafo 5</option>
+                      </select>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                      <div class="form-group">
+                        <label class="form-label">Cuenta regresiva (opcional)</label>
+                        <input type="datetime-local" class="form-input" id="pollEndsAt">
+                        <small style="color:var(--fg-muted);font-size:0.75rem;">Dejar vacío para sin límite</small>
+                      </div>
+                      <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:28px;">
+                        <input type="checkbox" id="pollActive" checked style="width:18px;height:18px;">
+                        <label for="pollActive" style="cursor:pointer;font-weight:600;">Encuesta activa</label>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:8px;">
+                      <button type="button" class="btn btn-primary" onclick="savePoll()"><i class="fas fa-save"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary" onclick="closePollForm()">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Stats modal -->
+                <div id="pollStatsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:24px;">
+                  <div style="background:var(--bg-card);border-radius:14px;padding:28px;max-width:500px;width:100%;position:relative;">
+                    <button type="button" onclick="document.getElementById('pollStatsModal').style.display='none'" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--fg-muted);"><i class="fas fa-times"></i></button>
+                    <h2 id="statsTitle" style="font-size:1.1rem;font-weight:700;margin-bottom:20px;padding-right:40px;"></h2>
+                    <div id="statsContent"></div>
+                  </div>
+                </div>`;
+                loadPolls();
             } else if (section === 'scraper') {
                 const sources = APP.state.sources || [];
                 const rows = sources.map(s => `
@@ -1634,6 +1720,214 @@
             await apiFetch(`/api/ads/${id}`, { method: 'DELETE' });
             showToast('Anuncio eliminado', 'success');
             loadAds();
+        }
+
+        // ─── Encuestas ────────────────────────────────────────────────────────
+        var POLL_OPTIONS_STATE = []; // {id?, text, imageFile?, imageUrl?}
+
+        const POLL_PLACEMENT_LABELS = {
+            home_top:'Home — Arriba', home_between:'Home — Entre secciones',
+            home_bottom:'Home — Abajo', article_paragraph:'Artículo — Párrafos',
+            article_bottom:'Artículo — Final', category:'Sección/Categoría'
+        };
+
+        async function loadPolls() {
+            const container = document.getElementById('pollsList');
+            if (!container) return;
+            try {
+                const res = await apiFetch('/api/polls');
+                const polls = await res.json();
+                if (!polls.length) { container.innerHTML = '<p style="color:var(--fg-muted);text-align:center;padding:40px;">No hay encuestas creadas. Creá la primera.</p>'; return; }
+                container.innerHTML = polls.map(poll => {
+                    const ended = poll.ends_at && new Date(poll.ends_at) < new Date();
+                    const winnerVotes = Math.max(...poll.options.map(o => o.votes || 0));
+                    const optHtml = poll.options.map(o => {
+                        const pct = poll.total_votes ? Math.round((o.votes || 0) / poll.total_votes * 100) : 0;
+                        const isWinner = (o.votes || 0) === winnerVotes && winnerVotes > 0;
+                        return `<div style="margin-bottom:6px;">
+                            <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:2px;">
+                                <span style="font-weight:${isWinner?'700':'400'};color:${isWinner?'var(--accent)':'var(--fg)'};">${esc(o.text)}</span>
+                                <span style="font-weight:700;">${pct}% <span style="color:var(--fg-muted);font-weight:400;">(${o.votes||0})</span></span>
+                            </div>
+                            <div style="height:6px;background:var(--bg-alt);border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;width:${pct}%;background:${isWinner?'var(--accent)':'var(--info)'};border-radius:3px;transition:width 0.5s;"></div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                    return `<div class="config-card">
+                        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:700;font-size:1rem;margin-bottom:3px;">${esc(poll.question)}</div>
+                                <div style="font-size:0.75rem;color:var(--fg-muted);">
+                                    ${POLL_PLACEMENT_LABELS[poll.placement]||poll.placement}
+                                    ${poll.placement==='article_paragraph'?' · Párrafo '+poll.article_paragraph_after:''}
+                                    &nbsp;·&nbsp; <b>${poll.total_votes}</b> votos
+                                    ${poll.ends_at ? ` &nbsp;·&nbsp; ${ended?'<span style="color:var(--danger)">Finalizada</span>':'Cierra: '+new Date(poll.ends_at).toLocaleString('es-AR')}` : ''}
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+                                <span class="badge ${poll.active?'badge-success':'badge-danger'}" style="cursor:pointer;" onclick="togglePollActive(${poll.id},${!poll.active})">${poll.active?'Activa':'Inactiva'}</span>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="editPoll(${poll.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="resetPollVotes(${poll.id})" title="Resetear votos"><i class="fas fa-redo"></i></button>
+                                <button type="button" class="btn btn-sm" style="background:var(--danger);color:#fff;" onclick="deletePoll(${poll.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div style="padding:12px;background:var(--bg-alt);border-radius:8px;">${optHtml}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) { if(container) container.innerHTML = '<p style="color:var(--danger);">Error cargando encuestas.</p>'; }
+        }
+
+        function openPollForm(data) {
+            POLL_OPTIONS_STATE = data ? data.options.map(o => ({id:o.id,text:o.text,imageUrl:o.image||''})) : [{text:''},{text:''}];
+            document.getElementById('pollId').value = data ? data.id : '';
+            document.getElementById('pollModalTitle').textContent = data ? 'Editar Encuesta' : 'Nueva Encuesta';
+            document.getElementById('pollQuestion').value = data ? data.question : '';
+            document.getElementById('pollDesc').value = data ? (data.description||'') : '';
+            document.getElementById('pollShowResults').value = data ? String(data.show_results) : '0';
+            document.getElementById('pollPlacement').value = data ? (data.placement||'home_top') : 'home_top';
+            document.getElementById('pollParagraphAfter').value = data ? (data.article_paragraph_after||2) : 2;
+            document.getElementById('pollActive').checked = data ? !!data.active : true;
+            document.getElementById('pollEndsAt').value = data && data.ends_at ? data.ends_at.slice(0,16) : '';
+            renderPollOptionsList();
+            togglePollParagraph();
+            document.getElementById('pollModal').style.display = 'flex';
+        }
+
+        function closePollForm() { document.getElementById('pollModal').style.display = 'none'; }
+
+        function togglePollParagraph() {
+            document.getElementById('pollParagraphField').style.display =
+                document.getElementById('pollPlacement').value === 'article_paragraph' ? 'block' : 'none';
+        }
+
+        function renderPollOptionsList() {
+            const container = document.getElementById('pollOptionsList');
+            if (!container) return;
+            container.innerHTML = POLL_OPTIONS_STATE.map((opt, i) => `
+                <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-alt);border-radius:8px;" id="poll-opt-row-${i}">
+                    ${opt.imageUrl
+                        ? `<div style="position:relative;flex-shrink:0;">
+                            <img src="${esc(opt.imageUrl)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                            <button type="button" onclick="removePollOptionImage(${i})" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:0.6rem;cursor:pointer;padding:0;line-height:1;"><i class="fas fa-times"></i></button>
+                           </div>`
+                        : `<div onclick="triggerOptImageUpload(${i})" style="width:48px;height:48px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:0.6rem;color:var(--fg-muted);text-align:center;"><i class="fas fa-image" style="font-size:1rem;display:block;margin-bottom:2px;"></i>Foto</div>`
+                    }
+                    <input type="file" id="opt-img-file-${i}" accept="image/*" style="display:none;" onchange="handleOptImageChange(${i},this)">
+                    <input type="text" class="form-input" style="flex:1;" placeholder="Texto de la opción" value="${esc(opt.text)}" oninput="POLL_OPTIONS_STATE[${i}].text=this.value">
+                    ${POLL_OPTIONS_STATE.length > 2 ? `<button type="button" onclick="removePollOption(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem;flex-shrink:0;"><i class="fas fa-trash"></i></button>` : ''}
+                </div>`).join('');
+        }
+
+        function triggerOptImageUpload(i) { document.getElementById('opt-img-file-'+i).click(); }
+
+        function handleOptImageChange(i, input) {
+            const file = input.files[0];
+            if (!file) return;
+            POLL_OPTIONS_STATE[i].imageFile = file;
+            const reader = new FileReader();
+            reader.onload = e => { POLL_OPTIONS_STATE[i].imageUrl = e.target.result; renderPollOptionsList(); };
+            reader.readAsDataURL(file);
+        }
+
+        function removePollOptionImage(i) {
+            POLL_OPTIONS_STATE[i].imageFile = null;
+            POLL_OPTIONS_STATE[i].imageUrl = '';
+            if (POLL_OPTIONS_STATE[i].id) POLL_OPTIONS_STATE[i]._removeImage = true;
+            renderPollOptionsList();
+        }
+
+        function addPollOption() { POLL_OPTIONS_STATE.push({text:''}); renderPollOptionsList(); }
+
+        function removePollOption(i) {
+            POLL_OPTIONS_STATE.splice(i, 1);
+            renderPollOptionsList();
+        }
+
+        async function savePoll() {
+            const id = document.getElementById('pollId').value;
+            const question = document.getElementById('pollQuestion').value.trim();
+            if (!question) return showToast('Escribí la pregunta', 'error');
+            const options = POLL_OPTIONS_STATE.filter(o => (o.text||'').trim());
+            if (options.length < 2) return showToast('Necesitás al menos 2 opciones con texto', 'error');
+            const endsAtVal = document.getElementById('pollEndsAt').value;
+            const payload = {
+                question,
+                description: document.getElementById('pollDesc').value.trim(),
+                show_results: parseInt(document.getElementById('pollShowResults').value),
+                active: document.getElementById('pollActive').checked,
+                ends_at: endsAtVal ? new Date(endsAtVal).toISOString() : null,
+                placement: document.getElementById('pollPlacement').value,
+                article_paragraph_after: parseInt(document.getElementById('pollParagraphAfter').value) || 2,
+                options: options.map((o,i) => ({id:o.id||null, text:o.text, sort_order:i}))
+            };
+            try {
+                const url = id ? `/api/polls/${id}` : '/api/polls';
+                const res = await apiFetch(url, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (!data.success && !id) return showToast(data.error || 'Error al guardar', 'error');
+                const pollId = id || data.id;
+                const returnedOptions = data.options || [];
+
+                // Upload images for new options
+                for (let i = 0; i < options.length; i++) {
+                    const opt = options[i];
+                    // Remove image if flagged
+                    if (opt._removeImage && opt.id) {
+                        await apiFetch(`/api/polls/options/${opt.id}/image`, { method: 'DELETE' });
+                    }
+                    // Upload new image
+                    if (opt.imageFile) {
+                        // Find option id: existing id or from returned options
+                        let optId = opt.id;
+                        if (!optId && returnedOptions[i]) optId = returnedOptions[i].id;
+                        if (optId) {
+                            const fd = new FormData();
+                            fd.append('image', opt.imageFile);
+                            const token = localStorage.getItem('dn-admin-token');
+                            await fetch(`/api/polls/options/${optId}/image`, { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
+                        }
+                    }
+                }
+                showToast(id ? 'Encuesta actualizada' : 'Encuesta creada', 'success');
+                closePollForm();
+                loadPolls();
+            } catch(e) { showToast('Error al guardar', 'error'); }
+        }
+
+        async function editPoll(id) {
+            try {
+                const res = await apiFetch('/api/polls');
+                const polls = await res.json();
+                const poll = polls.find(p => p.id === id);
+                if (!poll) return;
+                openPollForm(poll);
+            } catch(e) { showToast('Error cargando encuesta', 'error'); }
+        }
+
+        async function togglePollActive(id, active) {
+            try {
+                const res = await apiFetch('/api/polls');
+                const polls = await res.json();
+                const poll = polls.find(p => p.id === id);
+                if (!poll) return;
+                await apiFetch(`/api/polls/${id}`, { method:'PUT', body:JSON.stringify({...poll, active, options:poll.options}) });
+                loadPolls();
+            } catch(e) { showToast('Error', 'error'); }
+        }
+
+        async function resetPollVotes(id) {
+            if (!confirm('¿Resetear todos los votos de esta encuesta?')) return;
+            await apiFetch(`/api/polls/${id}/reset`, { method:'POST' });
+            showToast('Votos reseteados', 'success');
+            loadPolls();
+        }
+
+        async function deletePoll(id) {
+            if (!confirm('¿Eliminar esta encuesta y todos sus votos?')) return;
+            await apiFetch(`/api/polls/${id}`, { method:'DELETE' });
+            showToast('Encuesta eliminada', 'success');
+            loadPolls();
         }
 
         async function changeAdminPassword() {

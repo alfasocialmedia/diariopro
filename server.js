@@ -8,6 +8,7 @@ const fs = require('fs');
 const cron = require('node-cron');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
+const crypto = require('crypto');
 const { query, body, param, validationResult } = require('express-validator');
 
 const { corsOptions, helmetOptions, apiLimiter } = require('./config/middleware');
@@ -477,6 +478,205 @@ app.delete('/api/articles/:id', auth, [
     } catch (e) {
         res.status(500).json({ error: 'Error al eliminar articulo' });
     }
+});
+
+// ─── Encuestas ────────────────────────────────────────────────────────────────
+
+const pollsUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const dir = path.join(__dirname, 'public', 'uploads', 'polls');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        },
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            cb(null, 'poll-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + ext);
+        }
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/^image\/(jpeg|png|gif|webp|svg\+xml)$/.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Solo imágenes'));
+    }
+});
+
+function voterHash(req) {
+    return crypto.createHash('sha256')
+        .update((req.ip || '') + (req.headers['user-agent'] || ''))
+        .digest('hex').slice(0, 20);
+}
+
+async function getPollWithOptions(pollId) {
+    const poll = await getRow('SELECT * FROM polls WHERE id = ?', [pollId]);
+    if (!poll) return null;
+    poll.options = await getRows(
+        `SELECT po.*, (SELECT COUNT(*) FROM poll_votes pv WHERE pv.option_id = po.id) AS votes
+         FROM poll_options po WHERE po.poll_id = ? ORDER BY po.sort_order, po.id`,
+        [pollId]
+    );
+    poll.total_votes = poll.options.reduce((s, o) => s + (o.votes || 0), 0);
+    return poll;
+}
+
+// Encuestas públicas activas (con opciones y votos)
+app.get('/api/polls/public', async (req, res) => {
+    try {
+        const polls = await getRows('SELECT * FROM polls WHERE active = 1 ORDER BY id DESC');
+        for (const p of polls) {
+            p.options = await getRows(
+                `SELECT po.*, (SELECT COUNT(*) FROM poll_votes pv WHERE pv.option_id = po.id) AS votes
+                 FROM poll_options po WHERE po.poll_id = ? ORDER BY po.sort_order, po.id`, [p.id]
+            );
+            p.total_votes = p.options.reduce((s, o) => s + (o.votes || 0), 0);
+        }
+        res.json(polls);
+    } catch (e) { res.status(500).json({ error: 'Error al obtener encuestas' }); }
+});
+
+// Votar (público)
+app.post('/api/polls/:id/vote', [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('option_id').isInt({ min: 1 }).toInt()
+], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'Datos inválidos' });
+    try {
+        const { id } = req.params;
+        const { option_id } = req.body;
+        const hash = voterHash(req);
+        const poll = await getRow('SELECT * FROM polls WHERE id = ? AND active = 1', [id]);
+        if (!poll) return res.status(404).json({ error: 'Encuesta no encontrada o inactiva' });
+        if (poll.ends_at && new Date(poll.ends_at) < new Date()) return res.status(400).json({ error: 'La encuesta ha finalizado' });
+        const existing = await getRow('SELECT id FROM poll_votes WHERE poll_id = ? AND voter_hash = ?', [id, hash]);
+        if (existing) return res.status(400).json({ error: 'ya_votaste' });
+        const option = await getRow('SELECT id FROM poll_options WHERE id = ? AND poll_id = ?', [option_id, id]);
+        if (!option) return res.status(400).json({ error: 'Opción inválida' });
+        await runQuery('INSERT INTO poll_votes (poll_id, option_id, voter_hash, voted_at) VALUES (?,?,?,?)',
+            [id, option_id, hash, new Date().toISOString()]);
+        const updated = await getPollWithOptions(id);
+        res.json({ success: true, options: updated.options, total_votes: updated.total_votes });
+    } catch (e) { res.status(500).json({ error: 'Error al votar' }); }
+});
+
+// Encuestas (admin)
+app.get('/api/polls', auth, async (req, res) => {
+    try {
+        const polls = await getRows('SELECT * FROM polls ORDER BY id DESC');
+        for (const p of polls) {
+            p.options = await getRows(
+                `SELECT po.*, (SELECT COUNT(*) FROM poll_votes pv WHERE pv.option_id = po.id) AS votes
+                 FROM poll_options po WHERE po.poll_id = ? ORDER BY po.sort_order, po.id`, [p.id]
+            );
+            p.total_votes = p.options.reduce((s, o) => s + (o.votes || 0), 0);
+        }
+        res.json(polls);
+    } catch (e) { res.status(500).json({ error: 'Error' }); }
+});
+
+// Crear encuesta con opciones
+app.post('/api/polls', auth, async (req, res) => {
+    try {
+        const { question, description, show_results, active, ends_at, placement, article_paragraph_after, options } = req.body;
+        if (!question || !Array.isArray(options) || options.length < 2) return res.status(400).json({ error: 'Se necesita pregunta y al menos 2 opciones' });
+        const result = await runQuery(
+            'INSERT INTO polls (question, description, show_results, active, ends_at, placement, article_paragraph_after, created_at) VALUES (?,?,?,?,?,?,?,?)',
+            [String(question).slice(0, 500), String(description || '').slice(0, 1000),
+             parseInt(show_results) || 0, active ? 1 : 0, ends_at || null,
+             String(placement || 'home_top').slice(0, 50), parseInt(article_paragraph_after) || 2,
+             new Date().toISOString()]
+        );
+        const pollId = result.lastID;
+        const optionIds = [];
+        for (let i = 0; i < options.length; i++) {
+            const opt = options[i];
+            const or = await runQuery('INSERT INTO poll_options (poll_id, text, sort_order) VALUES (?,?,?)',
+                [pollId, String(opt.text || '').slice(0, 300), i]);
+            optionIds.push({ id: or.lastID, text: opt.text });
+        }
+        res.json({ success: true, id: pollId, options: optionIds });
+    } catch (e) { res.status(500).json({ error: 'Error al crear encuesta' }); }
+});
+
+// Actualizar encuesta
+app.put('/api/polls/:id', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const { question, description, show_results, active, ends_at, placement, article_paragraph_after, options } = req.body;
+        await runQuery(
+            'UPDATE polls SET question=?, description=?, show_results=?, active=?, ends_at=?, placement=?, article_paragraph_after=? WHERE id=?',
+            [String(question || '').slice(0, 500), String(description || '').slice(0, 1000),
+             parseInt(show_results) || 0, active ? 1 : 0, ends_at || null,
+             String(placement || 'home_top').slice(0, 50), parseInt(article_paragraph_after) || 2, req.params.id]
+        );
+        if (Array.isArray(options)) {
+            const existing = await getRows('SELECT id FROM poll_options WHERE poll_id = ?', [req.params.id]);
+            const existingIds = existing.map(r => r.id);
+            const incomingIds = options.filter(o => o.id).map(o => o.id);
+            for (const eid of existingIds) {
+                if (!incomingIds.includes(eid)) await runQuery('DELETE FROM poll_options WHERE id = ?', [eid]);
+            }
+            for (let i = 0; i < options.length; i++) {
+                const opt = options[i];
+                if (opt.id) {
+                    await runQuery('UPDATE poll_options SET text=?, sort_order=? WHERE id=? AND poll_id=?',
+                        [String(opt.text || '').slice(0, 300), i, opt.id, req.params.id]);
+                } else {
+                    await runQuery('INSERT INTO poll_options (poll_id, text, sort_order) VALUES (?,?,?)',
+                        [req.params.id, String(opt.text || '').slice(0, 300), i]);
+                }
+            }
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Error al actualizar' }); }
+});
+
+// Subir imagen para opción
+app.post('/api/polls/options/:id/image', auth, [param('id').isInt({ min: 1 }).toInt()], pollsUpload.single('image'), async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
+    try {
+        const url = '/uploads/polls/' + req.file.filename;
+        await runQuery('UPDATE poll_options SET image=? WHERE id=?', [url, req.params.id]);
+        res.json({ success: true, url });
+    } catch (e) { res.status(500).json({ error: 'Error' }); }
+});
+
+// Eliminar imagen de opción
+app.delete('/api/polls/options/:id/image', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const opt = await getRow('SELECT image FROM poll_options WHERE id=?', [req.params.id]);
+        if (opt && opt.image) {
+            const fp = path.join(__dirname, 'public', opt.image);
+            if (fs.existsSync(fp)) fs.unlinkSync(fp);
+        }
+        await runQuery('UPDATE poll_options SET image=NULL WHERE id=?', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Error' }); }
+});
+
+// Eliminar encuesta
+app.delete('/api/polls/:id', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const opts = await getRows('SELECT image FROM poll_options WHERE poll_id=?', [req.params.id]);
+        for (const o of opts) {
+            if (o.image) { const fp = path.join(__dirname, 'public', o.image); if (fs.existsSync(fp)) fs.unlinkSync(fp); }
+        }
+        await runQuery('DELETE FROM poll_votes WHERE poll_id=?', [req.params.id]);
+        await runQuery('DELETE FROM poll_options WHERE poll_id=?', [req.params.id]);
+        await runQuery('DELETE FROM polls WHERE id=?', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Error al eliminar' }); }
+});
+
+// Resetear votos de una encuesta
+app.post('/api/polls/:id/reset', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        await runQuery('DELETE FROM poll_votes WHERE poll_id=?', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Error' }); }
 });
 
 // ─── Anuncios ─────────────────────────────────────────────────────────────────

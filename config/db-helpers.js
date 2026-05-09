@@ -61,6 +61,17 @@ async function getPublicState() {
     state.config = sanitizeConfig(state.config);
     state.articles = state.articles.filter(a => a.status === 'published');
     try { state.ads = await getRows('SELECT * FROM ads WHERE active = 1'); } catch(e) { state.ads = []; }
+    try {
+        const polls = await getRows('SELECT * FROM polls WHERE active = 1 ORDER BY id DESC');
+        for (const p of polls) {
+            p.options = await getRows(
+                `SELECT po.*, (SELECT COUNT(*) FROM poll_votes pv WHERE pv.option_id = po.id) AS votes
+                 FROM poll_options po WHERE po.poll_id = ? ORDER BY po.sort_order, po.id`, [p.id]
+            );
+            p.total_votes = p.options.reduce((s, o) => s + (o.votes || 0), 0);
+        }
+        state.polls = polls;
+    } catch(e) { state.polls = []; }
     return state;
 }
 
