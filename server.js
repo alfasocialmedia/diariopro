@@ -9,6 +9,7 @@ const cron = require('node-cron');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const crypto = require('crypto');
+const XLSX = require('xlsx');
 const { query, body, param, validationResult } = require('express-validator');
 
 const { corsOptions, helmetOptions, apiLimiter } = require('./config/middleware');
@@ -551,8 +552,10 @@ app.post('/api/polls/:id/vote', [
         if (existing) return res.status(400).json({ error: 'ya_votaste' });
         const option = await getRow('SELECT id FROM poll_options WHERE id = ? AND poll_id = ?', [option_id, id]);
         if (!option) return res.status(400).json({ error: 'Opción inválida' });
-        await runQuery('INSERT INTO poll_votes (poll_id, option_id, voter_hash, voted_at) VALUES (?,?,?,?)',
-            [id, option_id, hash, new Date().toISOString()]);
+        const device = ['mobile','tablet','desktop'].includes(req.body.device) ? req.body.device : 'desktop';
+        const ua = String(req.headers['user-agent'] || '').slice(0, 300);
+        await runQuery('INSERT INTO poll_votes (poll_id, option_id, voter_hash, device, user_agent, voted_at) VALUES (?,?,?,?,?,?)',
+            [id, option_id, hash, device, ua, new Date().toISOString()]);
         const updated = await getPollWithOptions(id);
         res.json({ success: true, options: updated.options, total_votes: updated.total_votes });
     } catch (e) { res.status(500).json({ error: 'Error al votar' }); }
@@ -668,6 +671,227 @@ app.delete('/api/polls/:id', auth, [param('id').isInt({ min: 1 }).toInt()], asyn
         await runQuery('DELETE FROM polls WHERE id=?', [req.params.id]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Error al eliminar' }); }
+});
+
+// ─── Exportaciones de encuestas ───────────────────────────────────────────────
+
+async function getPollVotesDetail(pollId) {
+    return getRows(`
+        SELECT pv.id, pv.voted_at, pv.device, pv.user_agent,
+               po.text AS option_text, po.id AS option_id
+        FROM poll_votes pv
+        JOIN poll_options po ON po.id = pv.option_id
+        WHERE pv.poll_id = ?
+        ORDER BY pv.voted_at ASC
+    `, [pollId]);
+}
+
+function deviceLabel(d) {
+    if (d === 'mobile') return '📱 Móvil';
+    if (d === 'tablet') return '📲 Tablet';
+    return '🖥 Escritorio';
+}
+
+// CSV
+app.get('/api/polls/:id/export/csv', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const poll = await getPollWithOptions(req.params.id);
+        if (!poll) return res.status(404).json({ error: 'Encuesta no encontrada' });
+        const votes = await getPollVotesDetail(req.params.id);
+        const esc = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+        let csv = '﻿'; // BOM UTF-8
+        csv += ['#', 'Fecha', 'Hora', 'Opción Elegida', 'Dispositivo', 'User Agent'].map(esc).join(',') + '\n';
+        votes.forEach((v, i) => {
+            const dt = new Date(v.voted_at);
+            csv += [
+                i + 1,
+                dt.toLocaleDateString('es-AR'),
+                dt.toLocaleTimeString('es-AR'),
+                v.option_text,
+                deviceLabel(v.device),
+                v.user_agent || ''
+            ].map(esc).join(',') + '\n';
+        });
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="encuesta-${req.params.id}-votos.csv"`);
+        res.send(csv);
+    } catch (e) { res.status(500).json({ error: 'Error al exportar CSV' }); }
+});
+
+// Excel (XLSX)
+app.get('/api/polls/:id/export/xlsx', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const poll = await getPollWithOptions(req.params.id);
+        if (!poll) return res.status(404).json({ error: 'Encuesta no encontrada' });
+        const votes = await getPollVotesDetail(req.params.id);
+
+        const wb = XLSX.utils.book_new();
+
+        // Hoja 1: Resumen
+        const totalVotes = poll.total_votes || 0;
+        const byDev = { mobile: 0, tablet: 0, desktop: 0 };
+        votes.forEach(v => { byDev[v.device] = (byDev[v.device] || 0) + 1; });
+
+        const summaryRows = [
+            ['ENCUESTA — REPORTE COMPLETO'],
+            [],
+            ['Pregunta:', poll.question],
+            ['Descripción:', poll.description || '—'],
+            ['Total de votos:', totalVotes],
+            ['Fecha de creación:', poll.created_at ? new Date(poll.created_at).toLocaleString('es-AR') : '—'],
+            ['Estado:', poll.active ? 'Activa' : 'Inactiva'],
+            [],
+            ['— RESULTADOS POR OPCIÓN —'],
+            ['Opción', 'Votos', '% del total'],
+            ...poll.options.map(o => [o.text, o.votes || 0, totalVotes ? +((o.votes || 0) / totalVotes * 100).toFixed(1) : 0]),
+            [],
+            ['— POR DISPOSITIVO —'],
+            ['Dispositivo', 'Votos', '% del total'],
+            ['Móvil', byDev.mobile, totalVotes ? +((byDev.mobile) / totalVotes * 100).toFixed(1) : 0],
+            ['Tablet', byDev.tablet, totalVotes ? +((byDev.tablet) / totalVotes * 100).toFixed(1) : 0],
+            ['Escritorio', byDev.desktop, totalVotes ? +((byDev.desktop) / totalVotes * 100).toFixed(1) : 0],
+        ];
+        const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+        ws1['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+
+        // Hoja 2: Detalle de votos
+        const voteRows = [
+            ['#', 'Fecha', 'Hora', 'Opción Elegida', 'Dispositivo', 'User Agent'],
+            ...votes.map((v, i) => {
+                const dt = new Date(v.voted_at);
+                return [i + 1, dt.toLocaleDateString('es-AR'), dt.toLocaleTimeString('es-AR'),
+                    v.option_text, deviceLabel(v.device), v.user_agent || ''];
+            })
+        ];
+        const ws2 = XLSX.utils.aoa_to_sheet(voteRows);
+        ws2['!cols'] = [{ wch: 5 }, { wch: 14 }, { wch: 12 }, { wch: 30 }, { wch: 14 }, { wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, ws2, 'Detalle de Votos');
+
+        // Hoja 3: Por hora (agrupado)
+        const byHour = {};
+        votes.forEach(v => {
+            const h = new Date(v.voted_at).toISOString().slice(0, 13) + ':00';
+            byHour[h] = (byHour[h] || 0) + 1;
+        });
+        const hourRows = [
+            ['Hora', 'Cantidad de votos'],
+            ...Object.entries(byHour).map(([h, c]) => [new Date(h).toLocaleString('es-AR'), c])
+        ];
+        const ws3 = XLSX.utils.aoa_to_sheet(hourRows);
+        ws3['!cols'] = [{ wch: 22 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, ws3, 'Votos por Hora');
+
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="encuesta-${req.params.id}-reporte.xlsx"`);
+        res.send(buf);
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Error al exportar Excel' }); }
+});
+
+// Reporte HTML para imprimir/guardar como PDF
+app.get('/api/polls/:id/report', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const poll = await getPollWithOptions(req.params.id);
+        if (!poll) return res.status(404).json({ error: 'Encuesta no encontrada' });
+        const votes = await getPollVotesDetail(req.params.id);
+
+        const total = poll.total_votes || 0;
+        const byDev = { mobile: 0, tablet: 0, desktop: 0 };
+        votes.forEach(v => { byDev[v.device] = (byDev[v.device] || 0) + 1; });
+
+        const COLORS = ['#C8102E','#1565C0','#2E7D32','#E65100','#6A1B9A','#00838F','#F9A825','#4E342E'];
+
+        const optLabels = JSON.stringify(poll.options.map(o => o.text));
+        const optData = JSON.stringify(poll.options.map(o => o.votes || 0));
+        const optColors = JSON.stringify(poll.options.map((_, i) => COLORS[i % COLORS.length]));
+
+        const devLabels = JSON.stringify(['Móvil', 'Tablet', 'Escritorio']);
+        const devData = JSON.stringify([byDev.mobile, byDev.tablet, byDev.desktop]);
+        const devColors = JSON.stringify(['#C8102E', '#1565C0', '#2E7D32']);
+
+        const firstVote = votes[0] ? new Date(votes[0].voted_at).toLocaleString('es-AR') : '—';
+        const lastVote = votes[votes.length - 1] ? new Date(votes[votes.length - 1].voted_at).toLocaleString('es-AR') : '—';
+
+        const optRows = poll.options.map((o, i) => {
+            const pct = total ? (((o.votes || 0) / total) * 100).toFixed(1) : '0.0';
+            return `<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${COLORS[i % COLORS.length]};margin-right:6px;vertical-align:middle;"></span>${escAttr(o.text)}</td><td class="num">${o.votes || 0}</td><td class="num">${pct}%</td><td style="width:200px;padding:8px 12px;"><div style="height:10px;background:#eee;border-radius:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${COLORS[i % COLORS.length]};border-radius:5px;"></div></div></td></tr>`;
+        }).join('');
+
+        const voteRows = votes.slice(-100).reverse().map((v, i) => {
+            const dt = new Date(v.voted_at);
+            return `<tr><td>${votes.length - i}</td><td>${dt.toLocaleDateString('es-AR')}</td><td>${dt.toLocaleTimeString('es-AR')}</td><td>${escAttr(v.option_text)}</td><td>${deviceLabel(v.device)}</td></tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Reporte: ${escAttr(poll.question)}</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"><\/script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;color:#222;padding:32px;background:#fff;font-size:13px;}
+  h1{font-size:1.5rem;color:#C8102E;margin-bottom:4px;}
+  h2{font-size:1rem;color:#333;margin:28px 0 12px;border-bottom:2px solid #C8102E;padding-bottom:6px;}
+  .meta{color:#666;font-size:0.82rem;margin-bottom:20px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  .stat-card{background:#f5f5f5;border-radius:8px;padding:14px 16px;text-align:center;}
+  .stat-card .val{font-size:1.8rem;font-weight:800;color:#C8102E;}
+  .stat-card .lbl{font-size:0.75rem;color:#666;margin-top:4px;}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:28px;}
+  .chart-box{padding:16px;border:1px solid #eee;border-radius:8px;text-align:center;}
+  .chart-box h3{font-size:0.85rem;color:#555;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+  table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+  th{background:#C8102E;color:#fff;padding:8px 12px;text-align:left;font-weight:600;}
+  td{padding:7px 12px;border-bottom:1px solid #eee;}
+  tr:nth-child(even) td{background:#fafafa;}
+  .num{text-align:right;font-weight:600;}
+  .print-btn{position:fixed;top:16px;right:16px;background:#C8102E;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:0.9rem;font-weight:700;cursor:pointer;z-index:100;}
+  @media print{.print-btn{display:none;}.charts{grid-template-columns:1fr 1fr;}.stats-grid{grid-template-columns:repeat(4,1fr);}@page{margin:16mm;}}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+<h1>📊 Reporte de Encuesta</h1>
+<div class="meta">
+  Generado el ${new Date().toLocaleString('es-AR')} &nbsp;|&nbsp;
+  Creada: ${poll.created_at ? new Date(poll.created_at).toLocaleString('es-AR') : '—'} &nbsp;|&nbsp;
+  Estado: ${poll.active ? '✅ Activa' : '⛔ Inactiva'}
+</div>
+<div style="background:#fff3f3;border-left:4px solid #C8102E;padding:12px 16px;border-radius:4px;margin-bottom:24px;">
+  <div style="font-size:1.1rem;font-weight:700;">${escAttr(poll.question)}</div>
+  ${poll.description ? `<div style="color:#555;margin-top:4px;font-size:0.88rem;">${escAttr(poll.description)}</div>` : ''}
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><div class="val">${total}</div><div class="lbl">Total de votos</div></div>
+  <div class="stat-card"><div class="val">${byDev.mobile}</div><div class="lbl">📱 Móvil</div></div>
+  <div class="stat-card"><div class="val">${byDev.tablet + byDev.desktop}</div><div class="lbl">🖥 PC / Tablet</div></div>
+  <div class="stat-card"><div class="val">${total > 0 ? Math.round(byDev.mobile / total * 100) : 0}%</div><div class="lbl">Votos desde móvil</div></div>
+</div>
+<div style="margin-bottom:8px;font-size:0.78rem;color:#888;">Primer voto: ${firstVote} &nbsp;|&nbsp; Último voto: ${lastVote}</div>
+
+<div class="charts">
+  <div class="chart-box"><h3>Resultados por opción</h3><canvas id="chartOpts" width="300" height="300"></canvas></div>
+  <div class="chart-box"><h3>Distribución por dispositivo</h3><canvas id="chartDev" width="300" height="300"></canvas></div>
+</div>
+
+<h2>Resultados por opción</h2>
+<table><thead><tr><th>Opción</th><th class="num">Votos</th><th class="num">%</th><th>Barra</th></tr></thead>
+<tbody>${optRows}</tbody></table>
+
+<h2>Últimos 100 votos</h2>
+<table><thead><tr><th>#</th><th>Fecha</th><th>Hora</th><th>Opción Elegida</th><th>Dispositivo</th></tr></thead>
+<tbody>${voteRows}</tbody></table>
+
+<script>
+new Chart(document.getElementById('chartOpts'),{type:'pie',data:{labels:${optLabels},datasets:[{data:${optData},backgroundColor:${optColors},borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'bottom'}},responsive:false}});
+new Chart(document.getElementById('chartDev'),{type:'doughnut',data:{labels:${devLabels},datasets:[{data:${devData},backgroundColor:${devColors},borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'bottom'}},responsive:false,cutout:'50%'}});
+<\/script>
+</body></html>`;
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+    } catch (e) { console.error(e); res.status(500).json({ error: 'Error al generar reporte' }); }
 });
 
 // Resetear votos de una encuesta

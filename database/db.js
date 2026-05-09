@@ -83,8 +83,13 @@ db.serialize(() => {
         poll_id INTEGER,
         option_id INTEGER,
         voter_hash TEXT,
+        device TEXT DEFAULT 'desktop',
+        user_agent TEXT,
         voted_at TEXT
     )`);
+    // Migrations for existing installs
+    db.run(`ALTER TABLE poll_votes ADD COLUMN device TEXT DEFAULT 'desktop'`, () => {});
+    db.run(`ALTER TABLE poll_votes ADD COLUMN user_agent TEXT`, () => {});
 
     db.run(`CREATE TABLE IF NOT EXISTS ads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

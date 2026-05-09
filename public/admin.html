@@ -1765,9 +1765,12 @@
                                     ${poll.ends_at ? ` &nbsp;·&nbsp; ${ended?'<span style="color:var(--danger)">Finalizada</span>':'Cierra: '+new Date(poll.ends_at).toLocaleString('es-AR')}` : ''}
                                 </div>
                             </div>
-                            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+                            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
                                 <span class="badge ${poll.active?'badge-success':'badge-danger'}" style="cursor:pointer;" onclick="togglePollActive(${poll.id},${!poll.active})">${poll.active?'Activa':'Inactiva'}</span>
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="editPoll(${poll.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                                <a href="/api/polls/${poll.id}/report" target="_blank" class="btn btn-sm" style="background:#6A1B9A;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="Reporte PDF"><i class="fas fa-chart-pie"></i> PDF</a>
+                                <a href="/api/polls/${poll.id}/export/xlsx" class="btn btn-sm" style="background:#2E7D32;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="Exportar Excel"><i class="fas fa-file-excel"></i> Excel</a>
+                                <a href="/api/polls/${poll.id}/export/csv" class="btn btn-sm" style="background:#1565C0;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:4px;" title="Exportar CSV"><i class="fas fa-file-csv"></i> CSV</a>
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="resetPollVotes(${poll.id})" title="Resetear votos"><i class="fas fa-redo"></i></button>
                                 <button type="button" class="btn btn-sm" style="background:var(--danger);color:#fff;" onclick="deletePoll(${poll.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
                             </div>

@@ -2901,7 +2901,7 @@ if (serverState.articles) {
                 var res = await fetch('/api/polls/' + pollId + '/vote', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ option_id: optionId })
+                    body: JSON.stringify({ option_id: optionId, device: deviceType() })
                 });
                 var data = await res.json();
                 if (res.status === 400 && data.error === 'ya_votaste') {
