@@ -2221,7 +2221,10 @@
             }
 
             .footer-grid {
-                grid-template-columns: 1fr
+                grid-template-columns: 1fr 1fr 1fr
+            }
+            .footer-brand {
+                grid-column: 1 / -1
             }
 
             .article-view h1 {
@@ -2240,8 +2243,14 @@
             }
 
             .site-footer {
-                margin-bottom: calc(var(--player-h) - 10px)
+                margin-bottom: calc(var(--player-h) - 10px);
+                padding: 24px 16px 16px
             }
+            .footer-grid { gap: 16px; margin-bottom: 16px }
+            .footer-col h4 { margin-bottom: 8px; font-size: 0.72rem }
+            .footer-col a { font-size: 0.78rem; padding: 2px 0 }
+            .footer-brand p { display: none }
+            .footer-bottom { flex-direction: column; gap: 4px; text-align: center }
 
             .radio-hero h1 {
                 font-size: 2rem
@@ -2361,17 +2370,17 @@
 .rs-time { color: var(--accent); font-weight: 800; font-size: 1rem; }
 .rs-info h4 { color: #222; font-size: 1.15rem; margin: 4px 0 0 0; font-family: var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
 
-/* ═══ ÚLTIMAS NOTICIAS — sección dark, solo móvil ═══ */
-.ultimas-section { background: #1a1a1a; margin: 0; padding: 0 0 6px; }
-.ultimas-section-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 2px solid #C8102E; }
-.ultimas-section-icon { color: #C8102E; font-size: 0.8rem; line-height: 1; flex-shrink: 0; }
+/* ═══ ÚLTIMAS NOTICIAS — sección dark ═══ */
+.ultimas-section { display: block !important; background: #1a1a1a !important; margin: 0; padding: 0 0 6px; }
+.ultimas-section-header { display: flex !important; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 2px solid #C8102E; background: #1a1a1a; }
+.ultimas-section-icon { color: #C8102E; font-size: 0.85rem; line-height: 1; flex-shrink: 0; }
 .ultimas-section-title { color: #fff; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-display); }
 .ultimas-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background 0.15s; }
 .ultimas-item:active { background: rgba(255,255,255,0.06) }
 .ultimas-item:last-child { border-bottom: none }
 .ultimas-item-title { color: #f0f0f0; font-size: 0.88rem; font-weight: 700; line-height: 1.35; flex: 1; font-family: var(--font-display); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .ultimas-item-time { color: #777; font-size: 0.68rem; white-space: nowrap; flex-shrink: 0; padding-top: 3px; }
-@media (min-width: 769px) { .ultimas-section { display: none } }
+@media (min-width: 769px) { #ultimasContainer { display: none !important } }
 
     </style>
 </head>
