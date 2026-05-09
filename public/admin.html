@@ -169,6 +169,7 @@
                 <button class="admin-nav-item" data-admin="articles"><i class="fas fa-newspaper"></i> Artículos</button>
                 <button class="admin-nav-item" data-admin="radio-schedule"><i class="fas fa-calendar-alt"></i> Programación Radio</button>
                 <button class="admin-nav-item" data-admin="radio"><i class="fas fa-paint-brush"></i> Apariencia y Sistema</button>
+                <button class="admin-nav-item" data-admin="ads"><i class="fas fa-rectangle-ad"></i> Anuncios</button>
                 <button class="admin-nav-item" data-admin="ai"><i class="fas fa-robot"></i> IA Config</button>
                 <button class="admin-nav-item" data-admin="security"><i class="fas fa-shield-alt"></i> Seguridad</button>
                 <button class="admin-nav-item" onclick="logout()" style="margin-top: auto; color: var(--danger);"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
@@ -655,6 +656,106 @@
                         </div>
                         <button class="btn btn-primary" onclick="changeAdminPassword()">Actualizar Contraseña</button>
                     </div>`;
+            } else if (section === 'ads') {
+                main.innerHTML = `
+                <h1 class="admin-page-title">Anuncios</h1>
+                <p class="admin-page-desc">Gestioná banners y anuncios para móvil, tablet y escritorio.</p>
+                <div style="display:grid; grid-template-columns:1fr 340px; gap:24px; align-items:start;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                      <h2 style="font-size:1.05rem; font-weight:700;">Anuncios creados</h2>
+                      <button class="btn btn-primary" onclick="openAdForm()"><i class="fas fa-plus"></i> Nuevo Anuncio</button>
+                    </div>
+                    <div id="adsList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                  </div>
+                  <div class="config-card">
+                    <h3 style="font-size:0.88rem; font-weight:700; margin-bottom:12px;"><i class="fas fa-ruler-combined" style="color:var(--accent);"></i> Medidas recomendadas</h3>
+                    <table style="width:100%; font-size:0.78rem; border-collapse:collapse; line-height:1.8;">
+                      <tr style="background:var(--bg-alt);"><th style="text-align:left;padding:5px 8px;">Dispositivo</th><th style="padding:5px 8px; text-align:left;">Tipo</th><th style="padding:5px 8px; text-align:left; font-weight:900; color:var(--accent);">Medida</th></tr>
+                      <tr><td style="padding:4px 8px;">🖥 Escritorio</td><td style="padding:4px 8px;">Leaderboard</td><td style="padding:4px 8px; font-weight:700;">728 × 90 px</td></tr>
+                      <tr style="background:var(--bg-alt);"><td style="padding:4px 8px;">🖥 Escritorio</td><td style="padding:4px 8px;">Rectángulo</td><td style="padding:4px 8px; font-weight:700;">300 × 250 px</td></tr>
+                      <tr><td style="padding:4px 8px;">🖥 Escritorio</td><td style="padding:4px 8px;">Skyscraper</td><td style="padding:4px 8px; font-weight:700;">160 × 600 px</td></tr>
+                      <tr style="background:var(--bg-alt);"><td style="padding:4px 8px;">📲 Tablet</td><td style="padding:4px 8px;">Banner</td><td style="padding:4px 8px; font-weight:700;">468 × 60 px</td></tr>
+                      <tr><td style="padding:4px 8px;">📲 Tablet</td><td style="padding:4px 8px;">Rectángulo</td><td style="padding:4px 8px; font-weight:700;">300 × 250 px</td></tr>
+                      <tr style="background:var(--bg-alt);"><td style="padding:4px 8px;">📱 Móvil</td><td style="padding:4px 8px;">Banner</td><td style="padding:4px 8px; font-weight:700;">320 × 50 px</td></tr>
+                      <tr><td style="padding:4px 8px;">📱 Móvil</td><td style="padding:4px 8px;">Banner grande</td><td style="padding:4px 8px; font-weight:700;">320 × 100 px</td></tr>
+                      <tr style="background:var(--bg-alt);"><td style="padding:4px 8px;">📱/🖥 Todos</td><td style="padding:4px 8px;">Contenido</td><td style="padding:4px 8px; font-weight:700;">300 × 250 px</td></tr>
+                    </table>
+                  </div>
+                </div>
+                <div id="adModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+                  <div style="background:var(--bg-card); border-radius:14px; padding:28px; max-width:540px; width:100%; max-height:90vh; overflow-y:auto; position:relative;">
+                    <button onclick="closeAdForm()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--fg-muted);"><i class="fas fa-times"></i></button>
+                    <h2 id="adModalTitle" style="font-size:1.1rem; font-weight:700; margin-bottom:20px;">Nuevo Anuncio</h2>
+                    <input type="hidden" id="adId">
+                    <div class="form-group">
+                      <label class="form-label">Nombre del anuncio *</label>
+                      <input type="text" class="form-input" id="adName" placeholder="Ej: Banner home móvil">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Tipo de contenido *</label>
+                      <div style="display:flex; gap:12px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:2px solid var(--border);border-radius:8px;flex:1;transition:border-color 0.2s;" id="typeImgLabel">
+                          <input type="radio" name="adType" value="image" id="adTypeImage" onchange="toggleAdType()"> <i class="fas fa-image"></i> Subir imagen
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:2px solid var(--border);border-radius:8px;flex:1;transition:border-color 0.2s;" id="typeHtmlLabel">
+                          <input type="radio" name="adType" value="html" id="adTypeHtml" onchange="toggleAdType()"> <i class="fas fa-code"></i> Código HTML
+                        </label>
+                      </div>
+                    </div>
+                    <div id="adImageField" class="form-group" style="display:none;">
+                      <label class="form-label">Imagen del anuncio</label>
+                      <div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;" onclick="document.getElementById('adImageFile').click()">
+                        <i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:var(--fg-muted);display:block;margin-bottom:8px;"></i>
+                        <p style="font-size:0.82rem;color:var(--fg-muted);">Clic para seleccionar imagen<br><small>JPG, PNG, GIF, WebP — máx 5 MB</small></p>
+                        <div id="adImagePreview" style="margin-top:10px;"></div>
+                      </div>
+                      <input type="file" id="adImageFile" accept="image/*" style="display:none;" onchange="previewAdImage(this)">
+                    </div>
+                    <div id="adHtmlField" class="form-group" style="display:none;">
+                      <label class="form-label">Código HTML del anuncio</label>
+                      <textarea class="form-input" id="adHtmlContent" rows="5" placeholder="&lt;a href='...'&gt;&lt;img src='...'&gt;&lt;/a&gt; o código de Google AdSense" style="font-family:monospace;font-size:0.82rem;"></textarea>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Ubicación *</label>
+                      <select class="form-select" id="adPlacement" onchange="toggleParagraphField()">
+                        <option value="home_top">Home — Arriba del hero</option>
+                        <option value="home_between">Home — Entre secciones</option>
+                        <option value="home_bottom">Home — Antes del footer</option>
+                        <option value="article_paragraph">Artículo — Entre párrafos</option>
+                        <option value="article_bottom">Artículo — Al final</option>
+                        <option value="category">Sección / Categoría</option>
+                      </select>
+                    </div>
+                    <div id="adParagraphField" class="form-group" style="display:none;">
+                      <label class="form-label">Mostrar después del párrafo N°</label>
+                      <select class="form-select" id="adParagraphAfter">
+                        <option value="1">Párrafo 1</option><option value="2">Párrafo 2</option>
+                        <option value="3">Párrafo 3</option><option value="4">Párrafo 4</option>
+                        <option value="5">Párrafo 5</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Mostrar en dispositivos</label>
+                      <div style="display:flex; gap:20px; margin-top:6px;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="adMobile" checked> 📱 Móvil</label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="adTablet" checked> 📲 Tablet</label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="adDesktop" checked> 🖥 Escritorio</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                        <input type="checkbox" id="adActive" checked style="width:18px;height:18px;">
+                        <span>Anuncio activo (visible en el sitio)</span>
+                      </label>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-top:8px;">
+                      <button class="btn btn-primary" onclick="saveAd()"><i class="fas fa-save"></i> Guardar</button>
+                      <button class="btn btn-secondary" onclick="closeAdForm()">Cancelar</button>
+                    </div>
+                  </div>
+                </div>`;
+                loadAds();
             } else if (section === 'scraper') {
                 const sources = APP.state.sources || [];
                 const rows = sources.map(s => `
@@ -1380,6 +1481,159 @@
         function logout() {
             localStorage.removeItem('dn-admin-token');
             location.reload();
+        }
+
+        // ─── Anuncios ─────────────────────────────────────────────────────────
+        const AD_PLACEMENT_LABELS = {
+            home_top: 'Home — Arriba del hero', home_between: 'Home — Entre secciones',
+            home_bottom: 'Home — Antes del footer', article_paragraph: 'Artículo — Entre párrafos',
+            article_bottom: 'Artículo — Al final', category: 'Sección/Categoría'
+        };
+
+        async function loadAds() {
+            const container = document.getElementById('adsList');
+            if (!container) return;
+            try {
+                const res = await apiFetch('/api/ads');
+                const ads = await res.json();
+                if (!ads.length) { container.innerHTML = '<p style="color:var(--fg-muted);text-align:center;padding:40px;">No hay anuncios creados. Creá el primero.</p>'; return; }
+                container.innerHTML = ads.map(ad => `
+                    <div class="config-card" style="display:flex;align-items:center;gap:14px;padding:14px 16px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:700;margin-bottom:3px;">${esc(ad.name)}</div>
+                            <div style="font-size:0.75rem;color:var(--fg-muted);">
+                                ${AD_PLACEMENT_LABELS[ad.placement] || ad.placement}
+                                ${ad.placement === 'article_paragraph' ? ' · Párrafo ' + ad.paragraph_after : ''}
+                                &nbsp;·&nbsp; ${ad.type === 'image' ? '🖼 Imagen' : '&lt;/&gt; HTML'}
+                                &nbsp;·&nbsp; ${[ad.show_mobile?'📱':'', ad.show_tablet?'📲':'', ad.show_desktop?'🖥':''].filter(Boolean).join(' ')}
+                            </div>
+                        </div>
+                        <span class="badge ${ad.active ? 'badge-success' : 'badge-danger'}" style="cursor:pointer;white-space:nowrap;" onclick="toggleAdActive(${ad.id},${!ad.active})">${ad.active ? 'Activo' : 'Inactivo'}</span>
+                        <button class="btn btn-secondary btn-sm" onclick="editAd(${ad.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm" style="background:var(--danger);color:#fff;" onclick="deleteAd(${ad.id})"><i class="fas fa-trash"></i></button>
+                    </div>`).join('');
+            } catch(e) { if (container) container.innerHTML = '<p style="color:var(--danger);">Error cargando anuncios.</p>'; }
+        }
+
+        function openAdForm() {
+            document.getElementById('adId').value = '';
+            document.getElementById('adModalTitle').textContent = 'Nuevo Anuncio';
+            document.getElementById('adName').value = '';
+            document.getElementById('adTypeImage').checked = true;
+            document.getElementById('adHtmlContent').value = '';
+            document.getElementById('adImagePreview').innerHTML = '';
+            document.getElementById('adImageFile').value = '';
+            document.getElementById('adPlacement').value = 'home_top';
+            document.getElementById('adParagraphAfter').value = '1';
+            document.getElementById('adMobile').checked = true;
+            document.getElementById('adTablet').checked = true;
+            document.getElementById('adDesktop').checked = true;
+            document.getElementById('adActive').checked = true;
+            toggleAdType(); toggleParagraphField();
+            document.getElementById('adModal').style.display = 'flex';
+        }
+
+        function closeAdForm() { document.getElementById('adModal').style.display = 'none'; }
+
+        function toggleAdType() {
+            const isImg = document.getElementById('adTypeImage').checked;
+            document.getElementById('adImageField').style.display = isImg ? 'block' : 'none';
+            document.getElementById('adHtmlField').style.display = isImg ? 'none' : 'block';
+            document.getElementById('typeImgLabel').style.borderColor = isImg ? 'var(--accent)' : 'var(--border)';
+            document.getElementById('typeHtmlLabel').style.borderColor = isImg ? 'var(--border)' : 'var(--accent)';
+        }
+
+        function toggleParagraphField() {
+            document.getElementById('adParagraphField').style.display =
+                document.getElementById('adPlacement').value === 'article_paragraph' ? 'block' : 'none';
+        }
+
+        function previewAdImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('adImagePreview').innerHTML = `<img src="${e.target.result}" style="max-height:110px;border-radius:6px;margin-top:8px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function editAd(id) {
+            try {
+                const res = await apiFetch('/api/ads');
+                const ads = await res.json();
+                const ad = ads.find(a => a.id === id);
+                if (!ad) return;
+                document.getElementById('adId').value = ad.id;
+                document.getElementById('adModalTitle').textContent = 'Editar Anuncio';
+                document.getElementById('adName').value = ad.name;
+                if (ad.type === 'html') document.getElementById('adTypeHtml').checked = true;
+                else document.getElementById('adTypeImage').checked = true;
+                document.getElementById('adHtmlContent').value = ad.type === 'html' ? (ad.content || '') : '';
+                document.getElementById('adImagePreview').innerHTML = ad.type === 'image' && ad.content
+                    ? `<img src="${esc(ad.content)}" style="max-height:110px;border-radius:6px;margin-top:8px;">` : '';
+                document.getElementById('adImageFile').value = '';
+                document.getElementById('adPlacement').value = ad.placement || 'home_top';
+                document.getElementById('adParagraphAfter').value = ad.paragraph_after || 1;
+                document.getElementById('adMobile').checked = !!ad.show_mobile;
+                document.getElementById('adTablet').checked = !!ad.show_tablet;
+                document.getElementById('adDesktop').checked = !!ad.show_desktop;
+                document.getElementById('adActive').checked = !!ad.active;
+                toggleAdType(); toggleParagraphField();
+                document.getElementById('adModal').style.display = 'flex';
+            } catch(e) { showToast('Error cargando anuncio', 'error'); }
+        }
+
+        async function saveAd() {
+            const id = document.getElementById('adId').value;
+            const name = document.getElementById('adName').value.trim();
+            const type = document.getElementById('adTypeImage').checked ? 'image' : 'html';
+            if (!name) return showToast('Ingresá un nombre para el anuncio', 'error');
+            const payload = {
+                name, type,
+                content: type === 'html' ? document.getElementById('adHtmlContent').value : '',
+                placement: document.getElementById('adPlacement').value,
+                paragraph_after: parseInt(document.getElementById('adParagraphAfter').value) || 1,
+                show_mobile: document.getElementById('adMobile').checked,
+                show_tablet: document.getElementById('adTablet').checked,
+                show_desktop: document.getElementById('adDesktop').checked,
+                active: document.getElementById('adActive').checked
+            };
+            try {
+                const url = id ? `/api/ads/${id}` : '/api/ads';
+                const res = await apiFetch(url, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (!data.success && !id) return showToast('Error al guardar', 'error');
+                const savedId = id || data.id;
+                const file = document.getElementById('adImageFile').files[0];
+                if (type === 'image' && file) {
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    const token = localStorage.getItem('dn-admin-token');
+                    await fetch(`/api/ads/${savedId}/image`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+                }
+                showToast(id ? 'Anuncio actualizado' : 'Anuncio creado', 'success');
+                closeAdForm();
+                loadAds();
+            } catch(e) { showToast('Error al guardar', 'error'); }
+        }
+
+        async function toggleAdActive(id, active) {
+            try {
+                const res = await apiFetch('/api/ads');
+                const ads = await res.json();
+                const ad = ads.find(a => a.id === id);
+                if (!ad) return;
+                await apiFetch(`/api/ads/${id}`, { method: 'PUT', body: JSON.stringify({ ...ad, active }) });
+                loadAds();
+            } catch(e) { showToast('Error', 'error'); }
+        }
+
+        async function deleteAd(id) {
+            if (!confirm('¿Eliminar este anuncio?')) return;
+            await apiFetch(`/api/ads/${id}`, { method: 'DELETE' });
+            showToast('Anuncio eliminado', 'success');
+            loadAds();
         }
 
         async function changeAdminPassword() {

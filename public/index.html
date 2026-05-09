@@ -2370,6 +2370,11 @@
 .rs-time { color: var(--accent); font-weight: 800; font-size: 1rem; }
 .rs-info h4 { color: #222; font-size: 1.15rem; margin: 4px 0 0 0; font-family: var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
 
+/* ═══ ANUNCIOS ═══ */
+.ad-slot { text-align: center; padding: 12px 16px; overflow: hidden; }
+.ad-slot img { max-width: 100%; height: auto; display: inline-block; }
+@media (min-width: 769px) { .ad-slot { padding: 16px 0; } }
+
 /* ═══ ÚLTIMAS NOTICIAS — sección dark ═══ */
 .ultimas-section { display: block !important; background: #1a1a1a !important; margin: 0; padding: 0 0 6px; }
 .ultimas-section-header { display: flex !important; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 2px solid #C8102E; background: #1a1a1a; }
@@ -2754,6 +2759,40 @@ if (serverState.articles) {
         if (APP.articles === null) {
             APP.articles = DEMO_ARTICLES.map(function (a) { return Object.assign({}, a); });
         }
+        APP.ads = loadData('ads', []);
+
+        /* ===== ANUNCIOS ===== */
+        function deviceType() {
+            var w = window.innerWidth;
+            if (w <= 767) return 'mobile';
+            if (w <= 1024) return 'tablet';
+            return 'desktop';
+        }
+
+        function getAds(placement) {
+            var dt = deviceType();
+            return (APP.ads || []).filter(function(ad) {
+                if (ad.placement !== placement) return false;
+                if (dt === 'mobile' && !ad.show_mobile) return false;
+                if (dt === 'tablet' && !ad.show_tablet) return false;
+                if (dt === 'desktop' && !ad.show_desktop) return false;
+                return true;
+            });
+        }
+
+        function renderAdHtml(ad) {
+            if (!ad || !ad.content) return '';
+            var inner = ad.type === 'image'
+                ? '<img src="' + escAttr(ad.content) + '" alt="' + escAttr(ad.name) + '" style="max-width:100%;height:auto;display:block;margin:0 auto;">'
+                : ad.content;
+            return '<div class="ad-slot" data-ad-id="' + ad.id + '" style="text-align:center;padding:12px 0;">' + inner + '</div>';
+        }
+
+        function renderAdsBlock(placement) {
+            var ads = getAds(placement);
+            if (!ads.length) return '';
+            return ads.map(renderAdHtml).join('');
+        }
 
         /* ===== UTILIDADES ===== */
         function esc(s) { if (!s && s !== 0) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
@@ -2921,14 +2960,25 @@ if (serverState.articles) {
             var heroIds = [main.id]; for (var i = 0; i < sides.length; i++) heroIds.push(sides[i].id);
             function inHero(id) { for (var j = 0; j < heroIds.length; j++) { if (heroIds[j] === id) return true; } return false; }
 
+            // Anuncio home_top
+            var homeTopAd = renderAdsBlock('home_top');
+            if (homeTopAd) {
+                var topEl = document.querySelector('.hero-section');
+                if (topEl) topEl.insertAdjacentHTML('beforebegin', homeTopAd);
+            }
+
             var secs = '';
             var renderedIds = [...heroIds];
-            
+            var sectionCount = 0;
+
             for (var ci = 0; ci < APP.categories.length; ci++) {
                 var cat = APP.categories[ci];
                 if (cat.active === false) continue;
                 var rem = byCat(cat.id).filter(function (a) { return !inHero(a.id) }).slice(0, 3);
                 if (!rem.length) continue;
+                // Anuncio entre secciones (después de la primera)
+                if (sectionCount > 0) secs += renderAdsBlock('home_between');
+                sectionCount++;
                 secs += '<div class="news-section" style="padding-top:0"><div class="section-header"><h2>' + esc(cat.name) + '</h2><a href="#" onclick="event.preventDefault();nav(\'' + escAttr(cat.slug) + '\')">Ver todas <i class="fas fa-arrow-right" style="font-size:.75rem"></i></a></div><div class="news-grid stagger-in">';
                 for (var ri = 0; ri < rem.length; ri++) {
                     var a = rem[ri];
@@ -2937,6 +2987,8 @@ if (serverState.articles) {
                 }
                 secs += '</div></div>';
             }
+            // Anuncio home_bottom
+            secs += renderAdsBlock('home_bottom');
             
             
             document.getElementById('newsSectionsContainer').innerHTML = secs;
@@ -2982,21 +3034,41 @@ if (serverState.articles) {
             if (!a) return;
             var c = catById(a.categoryId);
             var paras = a.body.split(/\n\n+/);
+            var paraCount = 0;
             var ps = '';
+            // Collect article_paragraph ads indexed by paragraph_after
+            var paraAds = {};
+            (APP.ads || []).forEach(function(ad) {
+                if (ad.placement !== 'article_paragraph') return;
+                var dt = deviceType();
+                if (dt === 'mobile' && !ad.show_mobile) return;
+                if (dt === 'tablet' && !ad.show_tablet) return;
+                if (dt === 'desktop' && !ad.show_desktop) return;
+                var n = ad.paragraph_after || 1;
+                if (!paraAds[n]) paraAds[n] = [];
+                paraAds[n].push(ad);
+            });
             for (var i = 0; i < paras.length; i++) {
                 var p = paras[i].replace(/\n/g, ' ').trim();
                 if (!p) continue;
                 var subs = splitParagraph(p);
                 for (var j = 0; j < subs.length; j++) {
-                    if (subs[j].trim()) ps += '<p>' + esc(subs[j].trim()) + '</p>';
+                    if (subs[j].trim()) {
+                        paraCount++;
+                        ps += '<p>' + esc(subs[j].trim()) + '</p>';
+                        if (paraAds[paraCount]) {
+                            ps += paraAds[paraCount].map(renderAdHtml).join('');
+                        }
+                    }
                 }
             }
+            var articleBottomAd = renderAdsBlock('article_bottom');
             var shareTitle = encodeURIComponent(a.title);
             var articlePath = '/n/' + (a.slug || a.id);
             var shareUrl = encodeURIComponent(window.location.protocol + '//' + window.location.host + articlePath);
             history.replaceState(null, '', articlePath);
-            
-            document.getElementById('articleContent').innerHTML = 
+
+            document.getElementById('articleContent').innerHTML =
                 '<div class="article-back" onclick="nav(\'home\')"><i class="fas fa-arrow-left"></i> Volver</div>' +
                 '<span class="hero-category">' + esc(c ? c.name : 'General') + '</span>' +
                 '<h1>' + esc(a.title) + '</h1>' +
@@ -3004,6 +3076,7 @@ if (serverState.articles) {
                 '<div class="article-meta"><span><i class="far fa-clock"></i> ' + fmtDate(a.date) + '</span><span><i class="far fa-newspaper"></i> ' + esc(a.source || 'Redacción') + '</span></div>' +
                 '<img class="article-featured-img" src="' + escAttr(a.image) + '" alt="' + escAttr(a.title) + '" loading="lazy">' +
                 '<div class="article-body">' + ps + '</div>' +
+                (articleBottomAd ? articleBottomAd : '') +
                 '<div class="share-buttons-container" style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);">' +
                     '<h4 style="margin-bottom: 16px; font-family: var(--font-display);">Compartir noticia:</h4>' +
                     '<div style="display: flex; gap: 12px; flex-wrap: wrap;">' +
@@ -3021,7 +3094,13 @@ if (serverState.articles) {
             document.getElementById('categoryTitle').textContent = cat.name;
             var arts = byCat(cat.id), g = document.getElementById('categoryGrid');
             if (!arts.length) { g.innerHTML = '<p style="color:var(--fg-muted);grid-column:1/-1;text-align:center;padding:40px">No hay artículos en esta categoría.</p>'; return; }
-            var h = ''; for (var i = 0; i < arts.length; i++) { var a = arts[i]; h += '<div class="news-card" onclick="nav(\'article\',' + a.id + ')"><img class="news-card-img" src="' + escAttr(a.image) + '" alt="' + escAttr(a.title) + '" loading="lazy"><div class="news-card-body"><div class="news-card-cat">' + esc(cat.name) + '</div><h3>' + esc(a.title) + '</h3><p>' + esc(a.meta) + '</p><div class="news-card-meta"><span><i class="far fa-clock"></i> ' + fmtDate(a.date) + '</span></div></div></div>'; }
+            var catAd = renderAdsBlock('category');
+            var h = '';
+            for (var i = 0; i < arts.length; i++) {
+                var a = arts[i];
+                h += '<div class="news-card" onclick="nav(\'article\',' + a.id + ')"><img class="news-card-img" src="' + escAttr(a.image) + '" alt="' + escAttr(a.title) + '" loading="lazy"><div class="news-card-body"><div class="news-card-cat">' + esc(cat.name) + '</div><h3>' + esc(a.title) + '</h3><p>' + esc(a.meta) + '</p><div class="news-card-meta"><span><i class="far fa-clock"></i> ' + fmtDate(a.date) + '</span></div></div></div>';
+                if (i === 2 && catAd) h += '</div>' + catAd + '<div class="news-grid" style="margin-top:0;">';
+            }
             g.innerHTML = h;
         }
 

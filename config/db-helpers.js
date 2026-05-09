@@ -60,6 +60,7 @@ async function getPublicState() {
     const state = await getFullState();
     state.config = sanitizeConfig(state.config);
     state.articles = state.articles.filter(a => a.status === 'published');
+    try { state.ads = await getRows('SELECT * FROM ads WHERE active = 1'); } catch(e) { state.ads = []; }
     return state;
 }
 

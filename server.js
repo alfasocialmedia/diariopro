@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const cron = require('node-cron');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 const { query, body, param, validationResult } = require('express-validator');
 
 const { corsOptions, helmetOptions, apiLimiter } = require('./config/middleware');
@@ -475,6 +476,111 @@ app.delete('/api/articles/:id', auth, [
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: 'Error al eliminar articulo' });
+    }
+});
+
+// ─── Anuncios ─────────────────────────────────────────────────────────────────
+
+const adsUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const dir = path.join(__dirname, 'public', 'uploads', 'ads');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        },
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            cb(null, 'ad-' + Date.now() + ext);
+        }
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/^image\/(jpeg|png|gif|webp|svg\+xml)$/.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Solo se permiten imágenes'));
+    }
+});
+
+// Obtener anuncios activos (público — usado por el frontend)
+app.get('/api/ads/public', async (req, res) => {
+    try {
+        const ads = await getRows('SELECT * FROM ads WHERE active = 1 ORDER BY id DESC');
+        res.json(ads);
+    } catch (e) {
+        res.status(500).json({ error: 'Error al obtener anuncios' });
+    }
+});
+
+// Listar todos los anuncios (admin)
+app.get('/api/ads', auth, async (req, res) => {
+    try {
+        res.json(await getRows('SELECT * FROM ads ORDER BY id DESC'));
+    } catch (e) {
+        res.status(500).json({ error: 'Error al obtener anuncios' });
+    }
+});
+
+// Crear anuncio
+app.post('/api/ads', auth, async (req, res) => {
+    try {
+        const { name, type, content, placement, paragraph_after, show_mobile, show_tablet, show_desktop, active } = req.body;
+        if (!name || !type || !placement) return res.status(400).json({ error: 'Faltan campos obligatorios' });
+        const result = await runQuery(
+            'INSERT INTO ads (name, type, content, placement, paragraph_after, show_mobile, show_tablet, show_desktop, active, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [String(name).slice(0, 200), ['image', 'html'].includes(type) ? type : 'html',
+             String(content || ''), String(placement).slice(0, 50),
+             parseInt(paragraph_after) || 1, show_mobile ? 1 : 0, show_tablet ? 1 : 0,
+             show_desktop ? 1 : 0, active !== false ? 1 : 0, new Date().toISOString()]
+        );
+        res.json({ success: true, id: result.lastID });
+    } catch (e) {
+        res.status(500).json({ error: 'Error al crear anuncio' });
+    }
+});
+
+// Actualizar anuncio
+app.put('/api/ads/:id', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const { name, type, content, placement, paragraph_after, show_mobile, show_tablet, show_desktop, active } = req.body;
+        await runQuery(
+            'UPDATE ads SET name=?, type=?, content=?, placement=?, paragraph_after=?, show_mobile=?, show_tablet=?, show_desktop=?, active=? WHERE id=?',
+            [String(name || '').slice(0, 200), ['image', 'html'].includes(type) ? type : 'html',
+             String(content || ''), String(placement || '').slice(0, 50),
+             parseInt(paragraph_after) || 1, show_mobile ? 1 : 0, show_tablet ? 1 : 0,
+             show_desktop ? 1 : 0, active ? 1 : 0, req.params.id]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Error al actualizar anuncio' });
+    }
+});
+
+// Subir imagen para un anuncio
+app.post('/api/ads/:id/image', auth, [param('id').isInt({ min: 1 }).toInt()], adsUpload.single('image'), async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    if (!req.file) return res.status(400).json({ error: 'No se recibió imagen' });
+    try {
+        const imageUrl = '/uploads/ads/' + req.file.filename;
+        await runQuery('UPDATE ads SET content=?, type=? WHERE id=?', [imageUrl, 'image', req.params.id]);
+        res.json({ success: true, url: imageUrl });
+    } catch (e) {
+        res.status(500).json({ error: 'Error al guardar imagen' });
+    }
+});
+
+// Eliminar anuncio
+app.delete('/api/ads/:id', auth, [param('id').isInt({ min: 1 }).toInt()], async (req, res) => {
+    if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+    try {
+        const ad = await getRow('SELECT content, type FROM ads WHERE id=?', [req.params.id]);
+        if (ad && ad.type === 'image' && ad.content && ad.content.startsWith('/uploads/ads/')) {
+            const filePath = path.join(__dirname, 'public', ad.content);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+        await runQuery('DELETE FROM ads WHERE id=?', [req.params.id]);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Error al eliminar anuncio' });
     }
 });
 

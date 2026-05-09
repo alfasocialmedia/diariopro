@@ -58,6 +58,20 @@ db.serialize(() => {
         value TEXT
     )`);
 
+    db.run(`CREATE TABLE IF NOT EXISTS ads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        type TEXT,
+        content TEXT,
+        placement TEXT,
+        paragraph_after INTEGER DEFAULT 1,
+        show_mobile INTEGER DEFAULT 1,
+        show_tablet INTEGER DEFAULT 1,
+        show_desktop INTEGER DEFAULT 1,
+        active INTEGER DEFAULT 1,
+        created_at TEXT
+    )`);
+
     // Seed initial config if empty
     db.get("SELECT COUNT(*) as count FROM config", (err, row) => {
         if (row && row.count === 0) {
