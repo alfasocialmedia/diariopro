@@ -2929,20 +2929,6 @@ if (serverState.articles) {
                 secs += '</div></div>';
             }
             
-            // Collect any published articles that didn't get rendered (either no category or overflow)
-            var leftover = arts.filter(function(a) {
-                return renderedIds.indexOf(a.id) === -1;
-            }).slice(0, 6);
-            
-            if (leftover.length > 0) {
-                secs += '<div class="news-section" style="padding-top:0"><div class="section-header"><h2>Últimas Noticias</h2></div><div class="news-grid stagger-in">';
-                for (var ri = 0; ri < leftover.length; ri++) {
-                    var a = leftover[ri];
-                    var mc = catById(a.categoryId);
-                    secs += '<div class="news-card" onclick="nav(\'article\',' + a.id + ')"><img class="news-card-img" src="' + escAttr(a.image) + '" alt="' + escAttr(a.title) + '" loading="lazy"><div class="news-card-body"><div class="news-card-cat">' + esc(mc ? mc.name : 'General') + '</div><h3>' + esc(a.title) + '</h3><p>' + esc(a.meta) + '</p><div class="news-card-meta"><span><i class="far fa-clock"></i> ' + fmtDate(a.date) + '</span></div></div></div>';
-                }
-                secs += '</div></div>';
-            }
             
             document.getElementById('newsSectionsContainer').innerHTML = secs;
 
