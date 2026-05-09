@@ -2372,6 +2372,8 @@
 
 /* ═══ ENCUESTAS ═══ */
 .poll-widget { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin:16px 0; }
+        .poll-widget.poll-highlight { animation:pollPulse 2s ease forwards; }
+        @keyframes pollPulse { 0%,100% { box-shadow:none; } 20%,80% { box-shadow:0 0 0 4px rgba(200,16,46,0.35); } }
 .poll-tag { display:inline-flex; align-items:center; gap:6px; background:var(--accent); color:#fff; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; padding:3px 10px; border-radius:20px; margin-bottom:12px; }
 .poll-question { font-family:var(--font-display); font-size:1.1rem; font-weight:700; margin-bottom:6px; line-height:1.35; }
 .poll-desc { font-size:0.85rem; color:var(--fg-muted); margin-bottom:14px; }
@@ -2849,7 +2851,9 @@ if (serverState.articles) {
             var voted = getPollVote(poll.id);
             var votedId = voted ? voted.optionId : null;
             var showResults = (poll.show_results == 1) || (poll.show_results == 0 && votedId);
-            var shareText = encodeURIComponent('Participá en esta encuesta: ' + poll.question + ' ' + window.location.href);
+            var baseUrl = window.location.href.split('#')[0];
+            var pollAnchorUrl = baseUrl + '#poll-w-' + poll.id;
+            var shareText = encodeURIComponent('Participá en esta encuesta: ' + poll.question + '\n' + pollAnchorUrl);
             var cdText = poll.ends_at ? pollCountdown(poll.ends_at) : null;
 
             var html = '<div class="poll-widget" id="poll-w-' + poll.id + '">' +
@@ -2932,6 +2936,20 @@ if (serverState.articles) {
                 tmp.innerHTML = newHtml;
                 w.parentNode.replaceChild(tmp.firstChild, w);
             });
+        }
+
+        function scrollToPollFromHash() {
+            var hash = window.location.hash;
+            if (!hash || !hash.startsWith('#poll-w-')) return;
+            var id = hash.slice(8);
+            if (!id) return;
+            setTimeout(function() {
+                var el = document.getElementById('poll-w-' + id);
+                if (!el) return;
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('poll-highlight');
+                setTimeout(function() { el.classList.remove('poll-highlight'); }, 2200);
+            }, 400);
         }
 
         /* ===== ANUNCIOS ===== */
@@ -3175,6 +3193,7 @@ if (serverState.articles) {
             }
             uHtml += '</div>';
             document.getElementById('ultimasContainer').innerHTML = uHtml;
+            scrollToPollFromHash();
         }
 
         /* ===== RENDER: ARTÍCULO ===== */
@@ -3268,6 +3287,7 @@ if (serverState.articles) {
                         '<a href="https://twitter.com/intent/tweet?text=' + shareTitle + '&url=' + shareUrl + '" target="_blank" rel="noopener" style="background: #000; color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem;"><i class="fab fa-x-twitter" style="font-size: 1rem;"></i> Compartir</a>' +
                     '</div>' +
                 '</div>';
+            scrollToPollFromHash();
         }
 
         /* ===== RENDER: CATEGORÍA ===== */
@@ -3729,6 +3749,8 @@ if (serverState.articles) {
                 }
                 if (artBySlug) nav('article', artBySlug.id);
             }
+            // Hash routing: #poll-w-{id} → scroll to poll (e.g. from WhatsApp share link)
+            if (window.location.hash && window.location.hash.startsWith('#poll-w-')) scrollToPollFromHash();
 
             fetchCotizaciones();
             setInterval(fetchCotizaciones, 5 * 60 * 1000);
