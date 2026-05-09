@@ -2361,6 +2361,18 @@
 .rs-time { color: var(--accent); font-weight: 800; font-size: 1rem; }
 .rs-info h4 { color: #222; font-size: 1.15rem; margin: 4px 0 0 0; font-family: var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
 
+/* ═══ ÚLTIMAS NOTICIAS — sección dark, solo móvil ═══ */
+.ultimas-section { background: #1a1a1a; margin: 0; padding: 0 0 6px; }
+.ultimas-section-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 2px solid #C8102E; }
+.ultimas-section-icon { color: #C8102E; font-size: 0.8rem; line-height: 1; flex-shrink: 0; }
+.ultimas-section-title { color: #fff; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-display); }
+.ultimas-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background 0.15s; }
+.ultimas-item:active { background: rgba(255,255,255,0.06) }
+.ultimas-item:last-child { border-bottom: none }
+.ultimas-item-title { color: #f0f0f0; font-size: 0.88rem; font-weight: 700; line-height: 1.35; flex: 1; font-family: var(--font-display); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ultimas-item-time { color: #777; font-size: 0.68rem; white-space: nowrap; flex-shrink: 0; padding-top: 3px; }
+@media (min-width: 769px) { .ultimas-section { display: none } }
+
     </style>
 </head>
 
@@ -2420,6 +2432,7 @@
                 <div class="hero-grid stagger-in" id="heroGrid"></div>
             </section>
             <section class="news-section" id="newsSectionsContainer"></section>
+            <div id="ultimasContainer"></div>
             <footer class="site-footer">
                 <div class="footer-inner">
                     <div class="footer-grid">
@@ -2886,7 +2899,7 @@ if (serverState.articles) {
             var bLabel = document.querySelector('.breaking-label');
             initTicker(arts, APP.config.tickerSpeed);
             if (bLabel) bLabel.textContent = APP.config.tickerLabel || 'ULTIMA HORA';
-            if (!arts.length) { document.getElementById('heroGrid').innerHTML = '<p style="color:var(--fg-muted);text-align:center;padding:40px;grid-column:1/-1">No hay artículos publicados aún.</p>'; document.getElementById('newsSectionsContainer').innerHTML = ''; return; }
+            if (!arts.length) { document.getElementById('heroGrid').innerHTML = '<p style="color:var(--fg-muted);text-align:center;padding:40px;grid-column:1/-1">No hay artículos publicados aún.</p>'; document.getElementById('newsSectionsContainer').innerHTML = ''; document.getElementById('ultimasContainer').innerHTML = ''; return; }
             var main = arts[0], sides = arts.slice(1, 5), mc = catById(main.categoryId);
             var h = '<div class="hero-main" onclick="nav(\'article\',' + main.id + ')"><img src="' + escAttr(main.image) + '" alt="' + escAttr(main.title) + '" loading="lazy"><div class="hero-main-overlay"><span class="hero-category">' + esc(mc ? mc.name : 'General') + '</span><h2>' + esc(main.title) + '</h2><p>' + esc(main.meta) + '</p><div class="hero-meta"><span><i class="far fa-clock"></i> ' + fmtDate(main.date) + '</span></div></div></div><div class="hero-side">';
             for (var i = 0; i < sides.length; i++) {
@@ -2932,6 +2945,16 @@ if (serverState.articles) {
             }
             
             document.getElementById('newsSectionsContainer').innerHTML = secs;
+
+            // ÚLTIMAS NOTICIAS — lista compacta dark, solo visible en móvil (CSS lo oculta en desktop)
+            var latestArts = arts.slice(0, 12);
+            var uHtml = '<div class="ultimas-section"><div class="ultimas-section-header"><span class="ultimas-section-icon">&#9632;</span><span class="ultimas-section-title">Últimas Noticias</span></div>';
+            for (var ui = 0; ui < latestArts.length; ui++) {
+                var ua = latestArts[ui];
+                uHtml += '<div class="ultimas-item" onclick="nav(\'article\',' + ua.id + ')"><span class="ultimas-item-title">' + esc(ua.title) + '</span><span class="ultimas-item-time">' + fmtDate(ua.date) + '</span></div>';
+            }
+            uHtml += '</div>';
+            document.getElementById('ultimasContainer').innerHTML = uHtml;
         }
 
         /* ===== RENDER: ARTÍCULO ===== */
